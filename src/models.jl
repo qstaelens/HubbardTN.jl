@@ -80,7 +80,7 @@ function hopping_matrix2dict(t::Union{Vector{T}, Matrix{T}}) where {T<:AbstractF
     for i in 1:bands
         for j in 1:(num_sites*bands)
             if isa(t, Matrix)
-                if t[i, j]!= 0.0
+                if t[i, j] != 0.0
                     hopping[(i, j)] = t[i, j]
                     hopping[(j, i)] = conj(t[i, j])
                 end
