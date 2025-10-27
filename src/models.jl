@@ -67,14 +67,6 @@ end
 # Model parameters #
 ####################
 
-# Add interaction term and its Hermitian conjugate
-function addU!(U::Dict{NTuple{4,Int},T}, key::NTuple{4,Int}, val::T) where {T}
-    if val != 0 || key==(1,1,1,1)
-        U[key] = val
-        i,j,k,l = key
-        U[(l,k,j,i)] = conj(val)          # Hermitian conjugate term
-    end
-end
 # Convert hopping matrix to dictionary representation
 function hopping_matrix2dict(t::Union{Vector{T}, Matrix{T}}) where {T<:AbstractFloat}
     hopping = Dict{NTuple{2,Int},T}()
@@ -88,71 +80,104 @@ function hopping_matrix2dict(t::Union{Vector{T}, Matrix{T}}) where {T<:AbstractF
     for i in 1:bands
         for j in 1:(num_sites*bands)
             if isa(t, Matrix)
-                hopping[(i, j)] = t[i, j]
-                hopping[(j, i)] = conj(t[i, j])
+                if t[i, j]!= 0.0
+                    hopping[(i, j)] = t[i, j]
+                    hopping[(j, i)] = conj(t[i, j])
+                end
             else
-                hopping[(1,j)] = t[j]
-                hopping[(j,1)] = conj(t[j])
+                if t[j] != 0.0
+                    hopping[(1,j)] = t[j]
+                    hopping[(j,1)] = conj(t[j])
+                end
             end
         end
     end
 
     return hopping
 end
+# Add 2-body interaction term and its Hermitian conjugate
+function addU!(U::Dict{NTuple{4,Int},T}, key::NTuple{4,Int}, val::T) where {T}
+    if val != 0
+        U[key] = val
+        i,j,k,l = key
+        U[(l,k,j,i)] = conj(val)          # Hermitian conjugate term
+    end
+end
+# Add 3-body interaction term and its Hermitian conjugate
+function addV!(V::Dict{NTuple{6,Int},T}, key::NTuple{6,Int}, val::T) where {T}
+    if val != 0
+        V[key] = val
+        i,j,k,l,n,m = key
+        V[(m,n,l,k,j,i)] = conj(val)          # Hermitian conjugate term
+    end
+end
+# Make
+function three_body_term(i::Int64, j::Int64, value::T, V::Dict{NTuple{6,Int},T}=Dict{NTuple{6,Int},T}()) where {T<:AbstractFloat}
+    addV!(V, (i,i,j,j,i,i), value)
+    addV!(V, (i,j,i,i,j,i), value)
+    addV!(V, (j,i,i,i,i,j), value)
+    addV!(V, (i,j,j,j,j,i), value)
+    addV!(V, (j,i,j,j,i,j), value)
+    addV!(V, (j,j,i,i,j,j), value)
+    return V
+end
 
 """
     ModelParams{T<:AbstractFloat}
 
 Represents the Hamiltonian parameters for a lattice or multi-orbital system,
-including hopping terms and two-body interactions.
+including hopping terms, two-body, and three-body interactions.
 
 # Fields
 - `bands::Int64`  
     Number of orbitals or bands per unit cell. Must be positive.
 - `t::Dict{NTuple{2, Int64}, T}`  
     Hopping amplitudes between sites. Convention: `t[(i,i)] = μ_i` is the on-site potential,
-    `t[(i,j)]` for i ≠ j is the hopping amplitude from site i to j.
+    `t[(i,j)]` for `i ≠ j` is the hopping amplitude from site i to j.
 - `U::Dict{NTuple{4, Int64}, T}`  
     Two-body interaction tensor. Entries `U[(i,j,k,l)]` correspond to the operator
     c⁺_i c⁺_j c_k c_l. Zero entries can be omitted from the dictionary.
-- `A::Dict{NTuple{6, Int64}, T}`  
-    Placeholder for three-body interactions (Not yet implemented).
+- `V::Dict{NTuple{6, Int64}, T}`  
+    Three-body interaction tensor. Entries `V[(i,j,k,l,m,n)]` correspond to the operator
+    c⁺_i c⁺_j c⁺_k c_l c_m c_n. Zero entries can be omitted from the dictionary.
 
 # Constructors
-1. `ModelParams{T}(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T})`  
-   Standard constructor with explicit number of bands, hopping dictionary, and interaction dictionary.
 
-2. `ModelParams(t::Vector{T}, U::Dict{NTuple{4,Int},T})`  
-   Single-band constructor using hopping vector and two-body interaction dictionary.
-
-3. `ModelParams(t::Vector{T}, U::Vector{T})`  
-   Single-band constructor from hopping vector and a vector of on-site interactions.
-   Automatically converts vectors into the interaction dictionary.
-
-4. `ModelParams(t::Vector{T}, U::Vector{T}, exchange::Vector{T}, pair_hop::Vector{T}=exchange, bond_charge::Vector{T}=[0.0])`  
-   Constructs interactions including density-density (U), exchange, pair-hopping, and bond-charge terms.
-
+1. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T})`  
+   Standard constructor with explicit number of bands, hopping dictionary, and interaction dictionary. `V` is empty by default.
+2. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64},T})`  
+   Full constructor including three-body interactions.
+3. `ModelParams(t::Vector{T}, U::Dict{NTuple{4,Int},T})`  
+   Single-band constructor from hopping vector and two-body interaction dictionary.
+4. `ModelParams(t::Vector{T}, U::Vector{T})`  
+   Single-band constructor from hopping vector and a vector of on-site interactions. Converts the vector automatically into the interaction dictionary.
 5. `ModelParams(t::Matrix{T}, U::Matrix{T})`  
-   Multi-band constructor from hopping matrix and two-body interaction matrix. Checks Hermiticity and correct dimensions.
-
-6. `ModelParams(t::Vector{T}, U::Vector{T}, exchange::Vector{T}, pair_hop::Vector{T}=exchange)`  
-   Multi-band constructor with vectors of interactions, converted into the internal dictionary.
+   Multi-band constructor from hopping matrix and two-body interaction matrix. Checks Hermiticity and dimensions, converts into internal dictionary format.
+6. `ModelParams(t::Vector{T}, U::Vector{T}, V::Vector{T})`  
+   Single-band constructor including three-body interactions. Converts vectors into dictionaries internally.
+7. `ModelParams(t::Matrix{T}, U::Matrix{T}, V::Matrix{T})`  
+   Multi-band constructor including three-body interactions. Converts matrices into dictionaries and checks Hermiticity.
 
 # Notes
-- The constructors automatically convert hopping and interaction data from arrays or vectors into the
-  internal `Dict` representation.
-- Hermiticity of on-site interaction matrices is asserted where applicable.
-- Interaction dictionaries are structured for use in constructing many-body Hamiltonians.
+- Hopping and interaction arrays or vectors are automatically converted into the internal `Dict` representation.
+- Hermiticity of on-site interaction matrices is asserted when applicable.
+- The interaction dictionaries are structured for direct use in many-body Hamiltonian construction.
+- Zero entries in `U` or `V` can be omitted from the dictionaries.
 """
 struct ModelParams{T<:AbstractFloat}
     bands::Int64
     t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
     U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
-    # A::Dict{NTuple{6, Int64}, T}        # 3-body interaction
+    V::Dict{NTuple{6, Int64}, T}          # 3-body interaction V_ijklmn c⁺_i c⁺_j c⁺_k c_l c_m c_n
 
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U)
+        new{T}(bands, t, U, Dict())
+    end
+    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
+                        U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64}, T}) where {T<:AbstractFloat}
+        @assert bands > 0 "Number of bands must be a positive integer"
+        new{T}(bands, t, U, V)
     end
 end
 # Constructors
@@ -166,39 +191,6 @@ function ModelParams(t::Vector{T}, U::Vector{T}) where {T<:AbstractFloat}
         addU!(interaction, (1,i,i,1), val)
         addU!(interaction, (i,1,1,i), val)  # double counting: factor 1/2 added later
     end
-    return ModelParams(1, hopping_matrix2dict(t), interaction)
-end
-function ModelParams(
-            t::Vector{T},
-            U::Vector{T},
-            exchange::Vector{T},
-            pair_hop::Vector{T}=exchange,
-            bond_charge::Vector{T}=[0.0]
-        ) where {T<:AbstractFloat}
-
-    max_range = maximum(length.((U, exchange, pair_hop, bond_charge)))
-    interaction = Dict{NTuple{4,Int},T}()
-
-    for i in 1:max_range
-        if i <= length(U)
-            addU!(interaction, (1,i,i,1), U[i])
-            addU!(interaction, (i,1,1,i), U[i])
-        end
-        if i <= length(exchange)
-            addU!(interaction, (1,i+1,1,i+1), exchange[i])
-        end
-        if i <= length(pair_hop)
-            addU!(interaction, (1,1,i+1,i+1), pair_hop[i])
-        end
-        if i <= length(bond_charge)
-            # correlated hopping has multiple symmetry-related terms
-            addU!(interaction, (1,1,1,i+1), bond_charge[i])
-            addU!(interaction, (1,1,i+1,1), bond_charge[i])
-            addU!(interaction, (1,i+1,i+1,i+1), bond_charge[i])
-            addU!(interaction, (i+1,1,i+1,i+1), bond_charge[i])
-        end
-    end
-
     return ModelParams(1, hopping_matrix2dict(t), interaction)
 end
 function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
@@ -219,41 +211,32 @@ function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
 
     return ModelParams(bands, hopping_matrix2dict(t), interaction)
 end
-function ModelParams(
-            t::Matrix{T},
-            U::Matrix{T},
-            exchange::Matrix{T},
-            pair_hop::Matrix{T}=exchange,
-        ) where {T<:AbstractFloat}
-
-    bands = size(t, 1)
-
-    # --- basic checks ---
-    for operator in (U, exchange, pair_hop)
-        @assert size(operator, 1) == bands "First dimension ($(size(U,1))) must be equal to number of bands ($bands)"
-        @assert size(operator, 2) % bands == 0 "Second dimension ($(size(U,2))) must be multiple of number of bands ($bands)"
-        @assert ishermitian(operator[1:bands, 1:bands]) "on-site matrix is not Hermitian"
+function ModelParams(t::Vector{T}, U::Vector{T}, V::Vector{T}) where {T<:AbstractFloat}
+    model_base = ModelParams(t, U)
+    threebody = Dict{NTuple{6,Int},T}()
+    for (i, val) in enumerate(V)
+        threebody = three_body_term(1, i+1, val, threebody)
     end
 
-    interaction = Dict{NTuple{4,Int}, T}()
-    max_range = maximum(size.((U, exchange, pair_hop), 2))
+    return ModelParams(model_base.bands, model_base.t, model_base.U, threebody)
+end
+function ModelParams(t::Matrix{T}, U::Matrix{T}, V::Matrix{T}) where {T<:AbstractFloat}
+    model_base = ModelParams(t, U)
+    bands = model_base.bands
+    @assert size(V, 1) == bands "First dimension of V ($(size(V,1))) must be equal to number of bands ($bands)"
+    @assert size(V, 2) % bands == 0 "Second dimension of V ($(size(V,2))) must be multiple of number of bands ($bands)"
+    @assert ishermitian(V[1:bands, 1:bands]) "V on-site matrix is not Hermitian"
+
+    threebody = Dict{NTuple{6,Int},T}()
     for i in 1:bands
-        for j in 1:max_range
-            if j <= length(U)
-                addU!(interaction, (i,j,j,i), U[i,j])
-                j>bands && addU!(interaction, (j,i,i,j), U[i,j])
-            end
-            if j <= length(exchange)
-                addU!(interaction, (i,j,i,j), exchange[i,j])
-            end
-            if j <= length(pair_hop)
-                addU!(interaction, (i,i,j,j), pair_hop[i,j])
-            end
+        for j in 1:size(V,2)
+            threebody = three_body_term(i, j, V[i,j], threebody)
         end
     end
 
-    return ModelParams(bands, hopping_matrix2dict(t), interaction)
+    return ModelParams(model_base.bands, model_base.t, model_base.U, threebody)
 end
+
 
 ######################
 # Calculation set up #

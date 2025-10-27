@@ -1,3 +1,33 @@
+####################
+# Helper functions #
+####################
+
+# Maps (i,j,k,l) → Symbol(:aabb), :abab, :abcd, etc.
+function pattern_key(indices::Vararg{Int})
+    seen = Dict{Int,Char}()
+    nextchar = 'a'
+    keychars = Char[]
+    for idx in indices
+        if !haskey(seen, idx)
+            seen[idx] = nextchar
+            nextchar = Char(nextchar + 1)
+        end
+        push!(keychars, seen[idx])
+    end
+
+    return Symbol(String(keychars))
+end
+# Maps indices to actual lattice sites based on pattern key
+function compute_sites(indices::NTuple{N,Int}, lattice, key::Symbol) where {N}
+    letters = collect(string(key))
+    unique_letters = unique(letters)
+
+    selected_indices = [indices[findfirst(==(letter), letters)] for letter in unique_letters]
+
+    return tuple((lattice[idx] for idx in selected_indices)...)
+end
+
+
 #############################
 # Two-body interaction term #
 #############################
@@ -63,30 +93,6 @@ function two_body_int(ops, ::Val{:abcd})
     return @tensor operator[-1 -2 -3 -4; -5 -6 -7 -8] := ops.c⁺c[-1 -4; -5 -8] * ops.c⁺c[-2 -3; -6 -7]
 end
 
-# Maps (i,j,k,l) → Symbol(:aabb), :abab, :abcd, etc.
-function pattern_key(i,j,k,l)
-    inds = (i,j,k,l)
-    seen = Dict{Int,Char}()
-    nextchar = 'a'
-    keychars = Char[]
-    for idx in inds
-        if !haskey(seen, idx)
-            seen[idx] = nextchar
-            nextchar = Char(nextchar + 1)
-        end
-        push!(keychars, seen[idx])
-    end
-    return Symbol(String(keychars))
-end
-# Maps (i,j,k,l) to actual lattice sites based on pattern key
-function compute_sites(indices::NTuple{4,Int}, lattice, key::Symbol)
-    letters = collect(string(key))
-    unique_letters = unique(letters)
-
-    selected_indices = [indices[findfirst(==(letter), letters)] for letter in unique_letters]
-
-    return tuple((lattice[idx] for idx in selected_indices)...)
-end
 # Caching constructed two-body operators
 const two_body_cache = Dict{Symbol,Any}()
 function two_body_int_cached(ops, (i,j,k,l)::NTuple{4,Int}, lattice)
@@ -97,6 +103,52 @@ function two_body_int_cached(ops, (i,j,k,l)::NTuple{4,Int}, lattice)
     else
         operator = two_body_int(ops, Val(key))
         two_body_cache[key] = operator
+    end
+    sites = compute_sites((i,j,k,l), lattice, key)
+
+    return operator, sites
+end
+
+
+###############################
+# Three-body interaction term #
+###############################
+
+function three_body_int(ops, ::Val{key}) where key
+    pattern = String(key)
+    @assert length(pattern) == 6 "Three-body terms must have six indices."
+
+    if all(pattern[1] == pattern[i] for i in 2:3)
+        error("Three-body term of type V_iiilmn (first three equal) is not allowed.")
+    elseif all(pattern[end] == pattern[end-i+1] for i in 1:3)
+        error("Three-body term of type V_ijklll (last three equal) is not allowed.")
+    end
+
+    return _three_body_int(ops, Val(key))
+end
+function _three_body_int(ops, ::Val{:aabbaa})
+    return @tensor operator[-1 -2; -3 -4] := 2 * ops.n_pair[-1; -3] * ops.n[-2; -4] # factor 2 to counter double counting
+end
+function _three_body_int(ops, ::Val{:abaaba})
+    return @tensor operator[-1 -2; -3 -4] := 2 * ops.n_pair[-1; -3] * ops.n[-2; -4]
+end
+function _three_body_int(ops, ::Val{:abbbba})
+    return @tensor operator[-1 -2; -3 -4] := 2 * ops.n[-1; -3] * ops.n_pair[-2; -4]
+end
+function _three_body_int(ops, ::Val{key}) where key
+    error("Interaction terms with indices $key are not implemented")
+end
+
+# Caching constructed three-body operators
+const three_body_cache = Dict{Symbol,Any}()
+function three_body_int_cached(ops, (i,j,k,l,m,n)::NTuple{6,Int}, lattice)
+    key = pattern_key(i,j,k,l,m,n)
+
+    if haskey(three_body_cache, key)
+        operator = three_body_cache[key]
+    else
+        operator = three_body_int(ops, Val(key))
+        three_body_cache[key] = operator
     end
     sites = compute_sites((i,j,k,l), lattice, key)
 
@@ -147,14 +199,16 @@ and interaction parameters, taking into account particle and spin symmetries.
 """
 function hamiltonian(calc::CalcConfig)
     empty!(two_body_cache)
+    empty!(three_body_cache)
 
     symm = calc.symmetries
     ops = build_ops(symm)
     cell_width = symm.cell_width
 
+    bands = calc.model.bands
     t = calc.model.t
     U = calc.model.U
-    bands = calc.model.bands
+    V = calc.model.V
     lattice = InfiniteChain(cell_width * bands)
 
     H = @mpoham 0*ops.n{lattice[1]}       # Initialize MPO
@@ -165,12 +219,20 @@ function hamiltonian(calc::CalcConfig)
         H += @mpoham sum(-μ_i * ops.n{lattice[i+cell*bands]} for ((i,j), μ_i) in pairs(t) if i == j; init=0*ops.n{lattice[1]})
     end
 
-    # --- Interaction ---
+    # --- 2-body Interaction ---
     for cell in 0:(cell_width-1)
         H += @mpoham sum(begin
             operator, indices = two_body_int_cached(ops, (i,j,k,l) .+ cell*bands, lattice)
             0.5 * U_ijkl * operator{indices...}
         end for ((i,j,k,l), U_ijkl) in collect(pairs(U)); init=0*ops.n{lattice[1]})
+    end
+
+    # --- 3-body Interaction ---
+    for cell in 0:(cell_width-1)
+        H += @mpoham sum(begin
+            operator, indices = three_body_int_cached(ops, (i,j,k,l,m,n) .+ cell*bands, lattice)
+            1/6 * V_ijklmn * operator{indices...}
+        end for ((i,j,k,l,m,n), V_ijklmn) in collect(pairs(V)); init=0*ops.n{lattice[1]})
     end
 
     return H

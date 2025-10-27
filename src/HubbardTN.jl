@@ -13,7 +13,7 @@ using MPSKit, MPSKitModels
 using TensorKit, KrylovKit
 using JLD2
 
-include("simulations.jl")
+include("models.jl")
 include("operators.jl")
 include("hamiltonian.jl")
 include("groundstate.jl")
