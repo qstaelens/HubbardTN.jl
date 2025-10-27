@@ -14,8 +14,7 @@ tol = 1e-2
 @testset "ModelParams constructors" begin
     m1 = ModelParams([0.0 1.0; 1.0 0.0], Dict((1,1,1,1)=>5.0, (2,2,2,2)=>3.0))
     m2 = ModelParams([0.0 1.0; 1.0 0.0], [5.0 0.0; 0.0 3.0])
-    m3 = ModelParams(2, Dict((1,2)=>1.0, (2,1)=>1.0, (1,1)=>0.0, (2,2)=>0.0), 
-                     Dict((1,1,1,1)=>5.0, (2,2,2,2)=>3.0))
+    m3 = ModelParams(2, Dict((1,2)=>1.0, (2,1)=>1.0), Dict((1,1,1,1)=>5.0, (2,2,2,2)=>3.0))
     @test m1.bands == m2.bands == m3.bands
     @test m1.t == m2.t == m3.t
     @test m1.U == m2.U == m3.U
