@@ -2,15 +2,14 @@ using HubbardTN
 using TensorKit, MPSKit, Statistics
 
 # Step 1: Define the symmetries
-particle_symmetry = U1Irrep
+particle_symmetry = Trivial
 spin_symmetry = U1Irrep
 cell_width = 2
-filling = (1, 1)
 
-symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
+symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 
 # Step 2: Set up model parameters
-t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
+t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 
 model = ModelParams(t, U)
@@ -39,7 +38,3 @@ println("Mean Ne = ", mean(Ne))
 u, d = density_spin(ψ,symm)
 println("Spin up: $u")
 println("Spin down: $d")
-
-momenta = collect(range(0, 2π, length = 10))
-charges = [0.0, 0.0, 0.0]
-ex = compute_excitations(gs, momenta, charges)

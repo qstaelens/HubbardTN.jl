@@ -31,8 +31,8 @@ function density_e(ψ::InfiniteMPS, symm::SymmetryConfig)
         end
     end
 
-    check = (sum(Ne)/(length(ψ)) ≈ symm.filling[1]/symm.filling[2])
-    println("Filling is conserved: $check")
+    #check = (sum(Ne)/(length(ψ)) ≈ symm.filling[1]/symm.filling[2])
+    #println("Filling is conserved: $check")
 
     return Ne
 end
