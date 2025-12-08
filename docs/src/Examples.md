@@ -12,7 +12,7 @@ Two examples are provided:
 
 ```julia
 using HubbardTN
-using TensorKit
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep
@@ -58,7 +58,7 @@ The example below illustrates a **two-band Hubbard model** with custom hopping a
 
 ```julia
 using HubbardTN
-using TensorKit
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep
