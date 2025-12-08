@@ -69,7 +69,7 @@ Compute the staggered magnetization in an InfiniteMPS.
 function calc_ms(ψ::InfiniteMPS, symm::SymmetryConfig)
     up, down = density_spin(ψ, symm)
     Mag = up - down
-    println(Mag)
+    #println(Mag)
     if !all(x -> isapprox(abs(x),abs(Mag[1,1]),rtol=10^(-6)), vec(Mag))
         @warn "Staggerd magnetization varies across unit cell: returning value for first site only."
     end

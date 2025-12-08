@@ -38,3 +38,6 @@ println("Mean Ne = ", mean(Ne))
 u, d = density_spin(ψ,symm)
 println("Spin up: $u")
 println("Spin down: $d")
+
+Ms = calc_ms(ψ,symm)
+println("Ms: $Ms")
