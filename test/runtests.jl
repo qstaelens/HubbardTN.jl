@@ -23,7 +23,7 @@ ti = time()
     if GROUP == "ALL" || GROUP == "MultiBand"
         @time include("MultiBand.jl")
     end
-        if GROUP == "ALL" || GROUP == "ThreeBody"
+    if GROUP == "ALL" || GROUP == "ThreeBody"
         @time include("ThreeBody.jl")
     end
 end
