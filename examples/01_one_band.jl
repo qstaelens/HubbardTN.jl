@@ -1,5 +1,5 @@
 using HubbardTN
-using TensorKit
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep

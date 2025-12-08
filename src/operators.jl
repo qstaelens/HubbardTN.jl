@@ -194,8 +194,8 @@ Return the Hermitian conjugate of `c_plusmin_up`, i.e.
 It annihilates a spin-up electron at the first site and creates a spin-up electron at the second.
 """
 c_minplus_up(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_minplus_up(ComplexF64, P, S; kwargs...)
-function c_minplus_up(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1))
-    return copy(adjoint(c_plusmin_up(T, particle_symmetry, spin_symmetry; filling=filling)))
+function c_minplus_up(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return copy(adjoint(c_plusmin_up(T, particle_symmetry, spin_symmetry; kwargs...)))
 end
 
 """
@@ -206,8 +206,8 @@ Return the Hermitian conjugate of `c_plusmin_down`, i.e.
 It annihilates a spin-down electron at the first site and creates a spin-down electron at the second.
 """
 c_minplus_down(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_minplus_down(ComplexF64, P, S; kwargs...)
-function c_minplus_down(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1))
-    return copy(adjoint(c_plusmin_down(T, particle_symmetry, spin_symmetry; filling=filling)))
+function c_minplus_down(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return copy(adjoint(c_plusmin_down(T, particle_symmetry, spin_symmetry; kwargs...)))
 end
 
 """
@@ -217,9 +217,9 @@ Return the two-body operator that creates a particle at the first site and annih
 This is the sum of `c_plusmin_up` and `c_plusmin_down`.
 """
 c_plusmin(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_plusmin(ComplexF64, P, S; kwargs...)
-function c_plusmin(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1))
-    return c_plusmin_up(T, particle_symmetry, spin_symmetry; filling=filling) +
-        c_plusmin_down(T, particle_symmetry, spin_symmetry; filling=filling)
+function c_plusmin(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return c_plusmin_up(T, particle_symmetry, spin_symmetry; kwargs...) +
+        c_plusmin_down(T, particle_symmetry, spin_symmetry; kwargs...)
 end
 function c_plusmin(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     t = two_site_operator(T, Trivial, SU2Irrep)
