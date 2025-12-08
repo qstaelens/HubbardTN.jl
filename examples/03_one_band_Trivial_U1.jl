@@ -9,8 +9,8 @@ cell_width = 2
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 
 # Step 2: Set up model parameters
-t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
-U = [4.0]        # [on-site interaction, nn_interaction, ...]
+t = [4.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
+U = [4.0, 1.0]        # [on-site interaction, nn_interaction, ...]
 
 model = ModelParams(t, U)
 calc = CalcConfig(symm, model)
