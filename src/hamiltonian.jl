@@ -168,7 +168,8 @@ function build_ops(symm::SymmetryConfig)
     return (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
-        n        = number_e(ps, ss; filling=fill)
+        n        = number_e(ps, ss; filling=fill),
+        Sz        = Sz(ps, ss; filling=fill),
     )
 end
 

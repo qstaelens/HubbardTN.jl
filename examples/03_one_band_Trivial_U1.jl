@@ -8,7 +8,7 @@ cell_width = 2
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 
-u_range = 0:1:4
+u_range = 2:1:4
 for u in u_range
 
     mu = u/2;
@@ -20,7 +20,7 @@ for u in u_range
     calc = CalcConfig(symm, model)
 
     # Step 3: Compute the ground state
-    gs = compute_groundstate(calc;svalue=3.0)
+    gs = compute_groundstate(calc;svalue=2.0)
     ψ = gs["groundstate"]
     H = gs["ham"]
 
