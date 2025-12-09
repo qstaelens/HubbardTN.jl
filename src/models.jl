@@ -26,7 +26,7 @@ unit cell width, and optional filling information.
   `filling[2] * (mod(filling[1], 2) + 1)` to accommodate the specified filling.
 
 # Examples
-```julia
+
 # Trivial particle and spin symmetry, default cell width
 cfg1 = SymmetryConfig(Trivial, Trivial)
 

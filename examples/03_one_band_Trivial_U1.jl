@@ -8,36 +8,41 @@ cell_width = 2
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 
-# Step 2: Set up model parameters
-t = [4.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
-U = [4.0, 1.0]        # [on-site interaction, nn_interaction, ...]
+u_range = 0:1:4
+for u in u_range
 
-model = ModelParams(t, U)
-calc = CalcConfig(symm, model)
+    mu = u/2;
+    # Step 2: Set up model parameters
+    t = [mu, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
+    U = [Float64(u)]        # [on-site interaction, nn_interaction, ...]
 
-# Step 3: Compute the ground state
-gs = compute_groundstate(calc)
-ψ = gs["groundstate"]
-H = gs["ham"]
+    model = ModelParams(t, U)
+    calc = CalcConfig(symm, model)
 
-E0 = expectation_value(ψ, H)
-E = sum(real(E0)) / length(H)
-println("Groundstate energy: $E")
+    # Step 3: Compute the ground state
+    gs = compute_groundstate(calc;svalue=3.0)
+    ψ = gs["groundstate"]
+    H = gs["ham"]
 
-dim = dim_state(ψ)
-b = mean(dim)
-println("Mean bond dimension: $b")
+    E0 = expectation_value(ψ, H)
+    E = sum(real(E0)) / length(H)
+    println("Groundstate energy: $E")
 
-e = entanglement_spectrum(ψ)
-println("Entanglement spectrum: $e")
+    dim = dim_state(ψ)
+    b = mean(dim)
+    println("Mean bond dimension: $b")
 
-Ne = density_e(ψ,symm)
-println("Ne: $Ne")
-println("Mean Ne = ", mean(Ne))
+    e = entanglement_spectrum(ψ)
+    println("Entanglement spectrum: $e")
 
-u, d = density_spin(ψ,symm)
-println("Spin up: $u")
-println("Spin down: $d")
+    Ne = density_e(ψ,symm)
+    println("Ne: $Ne")
+    println("Mean Ne = ", mean(Ne))
 
-Ms = calc_ms(ψ,symm)
-println("Ms: $Ms")
+    u, d = density_spin(ψ,symm)
+    println("Spin up: $u")
+    println("Spin down: $d")
+
+    Ms = calc_ms(ψ,symm)
+    println("Ms: $Ms")
+end

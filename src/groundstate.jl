@@ -107,7 +107,7 @@ A `Dict` with the following entries:
 """
 function compute_groundstate(
                 calc::CalcConfig;
-                svalue::Float64=2.0,
+                svalue::Float64=3.0,
                 tol::Float64=1e-8, 
                 init_state::Union{Nothing, InfiniteMPS}=nothing,
                 maxiter::Int64=1000,

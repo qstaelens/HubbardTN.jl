@@ -13,12 +13,27 @@ tol = 1e-2
 
 u_range = 0:1:4
 E = zeros(length(u_range),1)
-
 E_norm = [-1.26967, -1.03717, -0.84145, -0.68707, -0.57119]
 
 @testset "Dependence on parameters" for u in u_range
     symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (1,1))
     model = ModelParams([0.0, 1.0], [Float64(u)])
+    calc = CalcConfig(symm, model)
+    gs = compute_groundstate(calc; tol=tol/10)
+    ψ₀ = gs["groundstate"]
+    H = gs["ham"]
+    E0 = expectation_value(ψ₀, H)
+    E[u+1] = sum(real(E0))/length(ψ₀)
+    @test E[u+1] ≈ E_norm[u+1] atol=tol
+end
+
+E = zeros(length(u_range),1)
+E_norm = [-1.273, -1.540, -1.844, -2.190, -2.5736]
+
+@testset "Dependence on parameters" for u in u_range
+    symm = SymmetryConfig(Trivial, U1Irrep, 2)
+    mu = u/2;
+    model = ModelParams([Float64(mu), 1.0], [Float64(u)])
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
