@@ -165,12 +165,15 @@ function build_ops(symm::SymmetryConfig)
     ps = symm.particle_symmetry
     ss = symm.spin_symmetry
     fill = symm.filling
-    return (
+    ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
-        n        = number_e(ps, ss; filling=fill),
-        Sz        = Sz(ps, ss; filling=fill),
+        n        = number_e(ps, ss; filling=fill)
     )
+    if ss === U1Irrep && ps !== SU2Irrep 
+        ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+    end
+    return ops
 end
 
 """
