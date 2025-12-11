@@ -11,21 +11,38 @@ tol = 1e-2
 # DEPENDENCE ON PARAMETERS #
 ############################
 
-u_range = 0:1:4
-E = zeros(length(u_range),1)
+u_range = 0:1.0:4
 
+E = zeros(length(u_range),1)
 E_norm = [-1.26967, -1.03717, -0.84145, -0.68707, -0.57119]
 
-@testset "Dependence on parameters" for u in u_range
+@testset "Dependence on parameters U1xSU2" for u in u_range
+    ind = Int(u) + 1
     symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (1,1))
-    model = ModelParams([0.0, 1.0], [Float64(u)])
+    model = ModelParams([0.0, 1.0], [u])
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
     H = gs["ham"]
     E0 = expectation_value(ψ₀, H)
-    E[u+1] = sum(real(E0))/length(ψ₀)
-    @test E[u+1] ≈ E_norm[u+1] atol=tol
+    E[ind] = sum(real(E0))/length(ψ₀)
+    @test E[ind] ≈ E_norm[ind] atol=tol
+end
+
+E = zeros(length(u_range),1)
+E_norm = [-1.273, -1.540, -1.844, -2.190, -2.5736]
+
+@testset "Dependence on parameters TrivialxU1" for u in u_range
+    ind = Int(u) + 1
+    symm = SymmetryConfig(Trivial, U1Irrep, 2)
+    model = ModelParams([u/2, 1.0], [u])
+    calc = CalcConfig(symm, model)
+    gs = compute_groundstate(calc; tol=tol/10)
+    ψ₀ = gs["groundstate"]
+    H = gs["ham"]
+    E0 = expectation_value(ψ₀, H)
+    E[ind] = sum(real(E0))/length(ψ₀)
+    @test E[ind] ≈ E_norm[ind] atol=tol
 end
 
 
