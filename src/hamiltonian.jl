@@ -242,10 +242,9 @@ function hamiltonian(calc::CalcConfig)
     # ------------------------------------------------------------------
     # --- NEW: Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
     # ------------------------------------------------------------------
-    Ms      = hasproperty(calc.model, :Ms)      ? calc.model.Ms      : 0.0
-    J_inter = hasproperty(calc.model, :J_inter) ? calc.model.J_inter : 0.0
+    J_inter, Ms = calc.model.J_M0
     if Ms != 0.0 && J_inter != 0.0
-        println("Using a staggered magn field")
+        println("Using staggered magn field")
         H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width * bands); init=0*ops.n{lattice[1]})
     end
 
