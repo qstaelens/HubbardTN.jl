@@ -28,7 +28,7 @@ unit cell width, and optional filling information.
 # Examples
     # Trivial particle and spin symmetry, default cell width
     cfg1 = SymmetryConfig(Trivial, Trivial)
-    
+
     # U(1) particle symmetry with SU(2) spin symmetry, cell width 2, filling 1/2
     cfg2 = SymmetryConfig(U1Irrep, SU2Irrep, cell_width=2, filling=(1,2))
 """
@@ -168,15 +168,21 @@ struct ModelParams{T<:AbstractFloat}
     t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
     U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
     V::Dict{NTuple{6, Int64}, T}          # 3-body interaction V_ijklmn c⁺_i c⁺_j c⁺_k c_l c_m c_n
+    J_M0::NTuple{2, T}                    # Staggered magnetic interaction J with initial magnetization M0
 
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, Dict())
+        new{T}(bands, t, U, Dict(), (0.0,0.0))
     end
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
                         U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64}, T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, V)
+        new{T}(bands, t, U, V, (0.0,0.0))
+    end
+    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
+                        U::Dict{NTuple{4,Int},T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
+        @assert bands > 0 "Number of bands must be a positive integer"
+        new{T}(bands, t, U, Dict(), J_M0)
     end
 end
 # Constructors
@@ -184,13 +190,13 @@ function ModelParams(t::Union{Vector{T}, Matrix{T}}, U::Dict{NTuple{4,Int},T}) w
     bands = isa(t, Matrix) ? size(t,1) : 1
     return ModelParams(bands, hopping_matrix2dict(t), U)
 end
-function ModelParams(t::Vector{T}, U::Vector{T}) where {T<:AbstractFloat}
+function ModelParams(t::Vector{T}, U::Vector{T}; J_M0::NTuple{2, T}=(0.0,0.0)) where {T<:AbstractFloat}
     interaction = Dict{NTuple{4,Int},T}()
     for (i, val) in enumerate(U)
         addU!(interaction, (1,i,i,1), val)
         addU!(interaction, (i,1,1,i), val)  # double counting: factor 1/2 added later
     end
-    return ModelParams(1, hopping_matrix2dict(t), interaction)
+    return ModelParams(1, hopping_matrix2dict(t), interaction, J_M0)
 end
 function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
     bands = size(t, 1)
