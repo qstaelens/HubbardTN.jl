@@ -50,7 +50,7 @@ function run_iterative_ms()
         u, d = density_spin(ψ, symm)
         Ne = density_e(ψ, symm)
 
-        println("Mean Ne = ", mean(Ne))
+        println("Mean number op electrons = ", mean(Ne))
         println("Spin up = ", u)
         println("Spin down = ", d)
 
