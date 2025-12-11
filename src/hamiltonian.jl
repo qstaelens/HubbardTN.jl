@@ -239,9 +239,7 @@ function hamiltonian(calc::CalcConfig)
         end for ((i,j,k,l,m,n), V_ijklmn) in collect(pairs(V)); init=0*ops.n{lattice[1]})
     end
 
-    # ------------------------------------------------------------------
-    # --- NEW: Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
-    # ------------------------------------------------------------------
+    # --- Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
     J_inter, Ms = calc.model.J_M0
     if Ms != 0.0 && J_inter != 0.0
         println("Using staggered magn field")
