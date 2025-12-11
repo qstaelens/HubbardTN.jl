@@ -131,7 +131,7 @@ end
 
 Return the two-body operator ``c†_{1,↓}, c_{2,↓}`` that creates a spin-down electron at the first site and annihilates a spin-down electron at the second.
 """
-c_plusmin_down(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_plusmin_down(ComplexF64, P, S; kwars...)
+c_plusmin_down(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_plusmin_down(ComplexF64, P, S; kwargs...)
 function c_plusmin_down(T, ::Type{Trivial}, ::Type{Trivial}; kwargs...)
     t = two_site_operator(T, Trivial, Trivial)
     I = sectortype(t)
@@ -354,7 +354,7 @@ function number_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,I
     t = single_site_operator(T, U1Irrep, Trivial; filling=filling)
     P, Q = filling
     I = sectortype(t)
-    block(t, I(1, Q-P))[2, 2] = 1 # expected to be [1,2]
+    block(t, I(1, Q-P))[2, 2] = 1
     block(t, I(0, 2Q-P))[1, 1] = 1
     return t
 end
@@ -375,7 +375,7 @@ end
 function number_down(T, ::Type{SU2Irrep}, ::Type{U1Irrep}; kwargs...)
     return error("Not implemented")
 end
-function number_down(T, ::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs)
+function number_down(T, ::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs...)
     throw(ArgumentError("`number_down` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 
@@ -429,4 +429,18 @@ function number_pair(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,
     I = sectortype(t)
     block(t, I(0, 2Q-P, 0)) .= 1
     return t
+end
+
+"""
+    Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+
+Return the one-body spin operator
+    Sᶻ = 1/2 (n_↑ - n_↓)
+
+This implementation is fully general and works for every symmetry
+combination for which `number_up` and `number_down` are defined.
+"""
+Sz(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = Sz(ComplexF64, P, S; kwargs...)
+function Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return 0.5 * (number_up(T, particle_symmetry, spin_symmetry; kwargs...) - number_down(T, particle_symmetry, spin_symmetry; kwargs...))
 end

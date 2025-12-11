@@ -165,11 +165,15 @@ function build_ops(symm::SymmetryConfig)
     ps = symm.particle_symmetry
     ss = symm.spin_symmetry
     fill = symm.filling
-    return (
+    ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
         n        = number_e(ps, ss; filling=fill)
     )
+    if ss === U1Irrep && ps !== SU2Irrep 
+        ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+    end
+    return ops
 end
 
 """
@@ -233,6 +237,13 @@ function hamiltonian(calc::CalcConfig)
             operator, indices = three_body_int_cached(ops, (i,j,k,l,m,n) .+ cell*bands, lattice)
             1/6 * V_ijklmn * operator{indices...}
         end for ((i,j,k,l,m,n), V_ijklmn) in collect(pairs(V)); init=0*ops.n{lattice[1]})
+    end
+
+    # --- Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
+    J_inter, Ms = calc.model.J_M0
+    if Ms != 0.0 && J_inter != 0.0
+        println("Using staggered magn field")
+        H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width * bands); init=0*ops.n{lattice[1]})
     end
 
     return H
