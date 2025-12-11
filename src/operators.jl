@@ -431,21 +431,16 @@ function number_pair(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,
     return t
 end
 
+"""
+    Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+
+Return the one-body spin operator
+    Sᶻ = 1/2 (n_↑ - n_↓)
+
+This implementation is fully general and works for every symmetry
+combination for which `number_up` and `number_down` are defined.
+"""
 Sz(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = Sz(ComplexF64, P, S; kwargs...)
-
-function Sz(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    t = single_site_operator(T, U1Irrep, U1Irrep; filling=filling)
-    P, Q = filling
-    I = sectortype(t)
-    block(t, I(1, Q-P, -1 // 2)) .= -0.5
-    block(t, I(1, Q-P, 1 // 2)) .= 0.5
-    return t
-end
-
-function Sz(T, ::Type{Trivial}, ::Type{U1Irrep}; kwargs...)
-    t = single_site_operator(T, Trivial, U1Irrep)
-    I = sectortype(t)
-    t[(I(1, -1 // 2), dual(I(1, -1 // 2)))][1, 1] = -0.5
-    t[(I(1, 1 // 2), dual(I(1, 1 // 2)))][1, 1] = 0.5
-    return t
+function Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return 0.5 * (number_up(T, particle_symmetry, spin_symmetry; kwargs...) - number_down(T, particle_symmetry, spin_symmetry; kwargs...))
 end

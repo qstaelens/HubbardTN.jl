@@ -29,10 +29,10 @@ function run_iterative_ms()
 
         # Step 3: Compute the ground state
         if ψ_init === nothing
-            gs = compute_groundstate(calc; svalue = 3.0)
+            gs = compute_groundstate(calc; svalue = 2.5)
         else
             println("Using previous gs as initial state")
-            gs = compute_groundstate(calc; svalue = 3.0,init_state = ψ_init)
+            gs = compute_groundstate(calc; svalue = 2.5,init_state = ψ_init)
         end
         ψ = gs["groundstate"]
         ψ_init = ψ

@@ -26,12 +26,11 @@ unit cell width, and optional filling information.
   `filling[2] * (mod(filling[1], 2) + 1)` to accommodate the specified filling.
 
 # Examples
+    # Trivial particle and spin symmetry, default cell width
+    cfg1 = SymmetryConfig(Trivial, Trivial)
 
-# Trivial particle and spin symmetry, default cell width
-cfg1 = SymmetryConfig(Trivial, Trivial)
-
-# U(1) particle symmetry with SU(2) spin symmetry, cell width 2, filling 1/2
-cfg2 = SymmetryConfig(U1Irrep, SU2Irrep, cell_width=2, filling=(1,2))
+    # U(1) particle symmetry with SU(2) spin symmetry, cell width 2, filling 1/2
+    cfg2 = SymmetryConfig(U1Irrep, SU2Irrep, cell_width=2, filling=(1,2))
 """
 struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
@@ -169,15 +168,21 @@ struct ModelParams{T<:AbstractFloat}
     t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
     U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
     V::Dict{NTuple{6, Int64}, T}          # 3-body interaction V_ijklmn c⁺_i c⁺_j c⁺_k c_l c_m c_n
+    J_M0::NTuple{2, T}                    # Staggered magnetic interaction J with initial magnetization M0
 
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, Dict())
+        new{T}(bands, t, U, Dict(), (0.0,0.0))
     end
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
                         U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64}, T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, V)
+        new{T}(bands, t, U, V, (0.0,0.0))
+    end
+    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
+                        U::Dict{NTuple{4,Int},T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
+        @assert bands > 0 "Number of bands must be a positive integer"
+        new{T}(bands, t, U, Dict(), J_M0)
     end
 end
 # Constructors
@@ -185,13 +190,13 @@ function ModelParams(t::Union{Vector{T}, Matrix{T}}, U::Dict{NTuple{4,Int},T}) w
     bands = isa(t, Matrix) ? size(t,1) : 1
     return ModelParams(bands, hopping_matrix2dict(t), U)
 end
-function ModelParams(t::Vector{T}, U::Vector{T}) where {T<:AbstractFloat}
+function ModelParams(t::Vector{T}, U::Vector{T}; J_M0::NTuple{2, T}=(0.0,0.0)) where {T<:AbstractFloat}
     interaction = Dict{NTuple{4,Int},T}()
     for (i, val) in enumerate(U)
         addU!(interaction, (1,i,i,1), val)
         addU!(interaction, (i,1,1,i), val)  # double counting: factor 1/2 added later
     end
-    return ModelParams(1, hopping_matrix2dict(t), interaction)
+    return ModelParams(1, hopping_matrix2dict(t), interaction, J_M0)
 end
 function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
     bands = size(t, 1)
@@ -237,69 +242,6 @@ function ModelParams(t::Matrix{T}, U::Matrix{T}, V::Matrix{T}) where {T<:Abstrac
     return ModelParams(model_base.bands, model_base.t, model_base.U, threebody)
 end
 
-struct ModelParams2{T<:AbstractFloat}
-    bands::Int64
-    t::Dict{NTuple{2, Int64}, T}
-    U::Dict{NTuple{4, Int64}, T}
-    V::Dict{NTuple{6, Int64}, T}
-    Ms::T
-    J_inter::T
-
-    function ModelParams2(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
-        return new{T}(bands, t, U, Dict(), T(Ms), T(J_inter))
-    end
-
-    function ModelParams2(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64}, T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
-        return new{T}(bands, t, U, V, T(Ms), T(J_inter))
-    end
-end
-
-function ModelParams2(t::Union{Vector{T}, Matrix{T}}, U::Dict{NTuple{4,Int},T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-    bands = isa(t, Matrix) ? size(t,1) : 1
-    return ModelParams2(bands, hopping_matrix2dict(t), U; Ms=Ms, J_inter=J_inter)
-end
-
-function ModelParams2(t::Vector{T}, U::Vector{T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-    interaction = Dict{NTuple{4,Int},T}()
-    for (i, val) in enumerate(U)
-        addU!(interaction, (1,i,i,1), val); addU!(interaction, (i,1,1,i), val)
-    end
-    return ModelParams2(1, hopping_matrix2dict(t), interaction; Ms=Ms, J_inter=J_inter)
-end
-
-function ModelParams2(t::Matrix{T}, U::Matrix{T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-    bands = size(t, 1)
-    @assert size(U, 1) == bands "First dimension of U must equal number of bands"
-    @assert size(U, 2) % bands == 0 "Second dimension of U must be multiple of number of bands"
-    @assert ishermitian(U[1:bands, 1:bands]) "U on-site block must be Hermitian"
-    interaction = Dict{NTuple{4,Int},T}()
-    for i in 1:bands
-        for j in 1:size(U,2)
-            addU!(interaction, (i,j,j,i), U[i,j]); if j>bands; addU!(interaction, (j,i,i,j), U[i,j]); end
-        end
-    end
-    return ModelParams2(bands, hopping_matrix2dict(t), interaction; Ms=Ms, J_inter=J_inter)
-end
-
-function ModelParams2(t::Vector{T}, U::Vector{T}, V::Vector{T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-    base = ModelParams2(t, U; Ms=Ms, J_inter=J_inter)
-    threebody = Dict{NTuple{6,Int},T}()
-    for (i, val) in enumerate(V); threebody = three_body_term(1, i+1, val, threebody); end
-    return ModelParams2(base.bands, base.t, base.U, threebody; Ms=Ms, J_inter=J_inter)
-end
-
-function ModelParams2(t::Matrix{T}, U::Matrix{T}, V::Matrix{T}; Ms::Real=0.0, J_inter::Real=0.0) where {T<:AbstractFloat}
-    base = ModelParams2(t, U; Ms=Ms, J_inter=J_inter)
-    bands = base.bands
-    @assert size(V, 1) == bands
-    @assert size(V, 2) % bands == 0
-    @assert ishermitian(V[1:bands, 1:bands])
-    threebody = Dict{NTuple{6,Int},T}()
-    for i in 1:bands; for j in 1:size(V,2); threebody = three_body_term(i, j, V[i,j], threebody); end; end
-    return ModelParams2(base.bands, base.t, base.U, threebody; Ms=Ms, J_inter=J_inter)
-end
 
 ######################
 # Calculation set up #
@@ -320,5 +262,5 @@ symmetries and model parameters.
 """
 struct CalcConfig
     symmetries::SymmetryConfig
-    model::Union{ModelParams{Float64}, ModelParams2{Float64}}
+    model::ModelParams{Float64}
 end
