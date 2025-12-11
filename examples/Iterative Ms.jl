@@ -1,4 +1,4 @@
- using HubbardTN
+using HubbardTN
 using TensorKit, MPSKit, Statistics
 
 function run_iterative_ms()
@@ -15,8 +15,9 @@ function run_iterative_ms()
 
     E_list  = Float64[]
     Ms_list = Float64[Ms]
+    ψ_init = nothing
 
-    for i in 1:3
+    for i in 1:2
         println("\nStep $i: Ms = $Ms")
 
         # Step 2: Set up model parameters
@@ -27,8 +28,14 @@ function run_iterative_ms()
         calc  = CalcConfig(symm, model)
 
         # Step 3: Compute the ground state
-        gs = compute_groundstate(calc; svalue = 3.5)
+        if ψ_init === nothing
+            gs = compute_groundstate(calc; svalue = 3.0)
+        else
+            println("Using previous gs as initial state")
+            gs = compute_groundstate(calc; svalue = 3.0,init_state = ψ_init)
+        end
         ψ = gs["groundstate"]
+        ψ_init = ψ
         H = gs["ham"]
 
         E0 = expectation_value(ψ, H)

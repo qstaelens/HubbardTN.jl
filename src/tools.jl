@@ -30,10 +30,7 @@ function density_e(ψ::InfiniteMPS, symm::SymmetryConfig)
             Ne[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n))
         end
     end
-
-    #check = (sum(Ne)/(length(ψ)) ≈ symm.filling[1]/symm.filling[2])
-    #println("Filling is conserved: $check")
-
+    
     return Ne
 end
 

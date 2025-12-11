@@ -1,5 +1,5 @@
 using HubbardTN
-using TensorKit, MPSKit, Statistics
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep
@@ -26,20 +26,20 @@ E = sum(real(E0)) / length(H)
 println("Groundstate energy: $E")
 
 dim = dim_state(ψ)
-b = mean(dim)
-println("Mean bond dimension: $b")
+b = max(dim)
+println("Max bond dimension: $b")
 
 e = entanglement_spectrum(ψ)
 println("Entanglement spectrum: $e")
 
 Ne = density_e(ψ,symm)
-println("Ne: $Ne")
-println("Mean Ne = ", mean(Ne))
+println("Number of electrons per site: ", Ne)
 
 u, d = density_spin(ψ,symm)
 println("Spin up: $u")
 println("Spin down: $d")
 
+# Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × U1Irrep(0) sector
 momenta = collect(range(0, 2π, length = 10))
 charges = [0.0, 0.0, 0.0]
 ex = compute_excitations(gs, momenta, charges)
