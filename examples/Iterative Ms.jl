@@ -23,8 +23,9 @@ function run_iterative_ms()
         # Step 2: Set up model parameters
         t = [0.0, 0.49,0.078]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
         U = [3.56,1.09]        # [on-site interaction, nn_interaction, ...]
+        J_M0 = (J_inter, Ms)
 
-        model = ModelParams2(t, U; Ms = Ms, J_inter = J_inter)
+        model = ModelParams(t, U, J_M0)
         calc  = CalcConfig(symm, model)
 
         # Step 3: Compute the ground state

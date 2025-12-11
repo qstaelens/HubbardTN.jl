@@ -206,9 +206,6 @@ function hamiltonian(calc::CalcConfig)
     empty!(three_body_cache)
 
     symm = calc.symmetries
-    ps = symm.particle_symmetry
-    ss = symm.spin_symmetry
-
     ops = build_ops(symm)
     cell_width = symm.cell_width
 
@@ -216,7 +213,6 @@ function hamiltonian(calc::CalcConfig)
     t = calc.model.t
     U = calc.model.U
     V = calc.model.V
-
     lattice = InfiniteChain(cell_width * bands)
 
     H = @mpoham 0*ops.n{lattice[1]}       # Initialize MPO
@@ -246,13 +242,11 @@ function hamiltonian(calc::CalcConfig)
     # ------------------------------------------------------------------
     # --- NEW: Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
     # ------------------------------------------------------------------
-    if ss === U1Irrep && ps !== SU2Irrep 
-        Ms      = hasproperty(calc.model, :Ms)      ? calc.model.Ms      : 0.0
-        J_inter = hasproperty(calc.model, :J_inter) ? calc.model.J_inter : 0.0
-        if Ms != 0.0 && J_inter != 0.0
-            println("Using a staggered magn field")
-            H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width * bands); init=0*ops.n{lattice[1]})
-        end
+    Ms      = hasproperty(calc.model, :Ms)      ? calc.model.Ms      : 0.0
+    J_inter = hasproperty(calc.model, :J_inter) ? calc.model.J_inter : 0.0
+    if Ms != 0.0 && J_inter != 0.0
+        println("Using a staggered magn field")
+        H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width * bands); init=0*ops.n{lattice[1]})
     end
 
     return H
