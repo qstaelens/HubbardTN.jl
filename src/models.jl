@@ -139,17 +139,20 @@ including hopping terms, two-body, and three-body interactions.
 - `V::Dict{NTuple{6, Int64}, T}`  
     Three-body interaction tensor. Entries `V[(i,j,k,l,m,n)]` correspond to the operator
     c⁺_i c⁺_j c⁺_k c_l c_m c_n. Zero entries can be omitted from the dictionary.
+- `J_M0::NTuple{2, T}`  
+    Tuple containing inter-chain Hund's coupling `J` and initial staggered magnetization `M0`. Only implemented for single-band models.
 
 # Constructors
 
 1. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T})`  
    Standard constructor with explicit number of bands, hopping dictionary, and interaction dictionary. `V` is empty by default.
 2. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64},T})`  
-   Full constructor including three-body interactions.
+   Constructor including three-body interactions.
 3. `ModelParams(t::Vector{T}, U::Dict{NTuple{4,Int},T})`  
    Single-band constructor from hopping vector and two-body interaction dictionary.
-4. `ModelParams(t::Vector{T}, U::Vector{T})`  
-   Single-band constructor from hopping vector and a vector of on-site interactions. Converts the vector automatically into the interaction dictionary.
+4. `ModelParams(t::Vector{T}, U::Vector{T}; J_M0::NTuple{2, T}=(0.0,0.0)))`  
+   Single-band constructor from hopping vector, a vector of on-site interactions, and optionally staggered magnetic field parameters. 
+   Converts the vector automatically into the interaction dictionary.
 5. `ModelParams(t::Matrix{T}, U::Matrix{T})`  
    Multi-band constructor from hopping matrix and two-body interaction matrix. Checks Hermiticity and dimensions, converts into internal dictionary format.
 6. `ModelParams(t::Vector{T}, U::Vector{T}, V::Vector{T})`  
@@ -181,8 +184,13 @@ struct ModelParams{T<:AbstractFloat}
     end
     function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
                         U::Dict{NTuple{4,Int},T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
+        @assert bands == 1 "Staggered magnetization field term is only implemented for single-band models."
         new{T}(bands, t, U, Dict(), J_M0)
+    end
+    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, 
+             V::Dict{NTuple{6, Int64}, T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
+        @assert bands == 1 "Staggered magnetization field term is only implemented for single-band models."
+        new{T}(bands, t, U, V, J_M0)
     end
 end
 # Constructors

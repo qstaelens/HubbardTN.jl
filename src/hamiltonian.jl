@@ -170,7 +170,7 @@ function build_ops(symm::SymmetryConfig)
         n_pair   = number_pair(ps, ss; filling=fill),
         n        = number_e(ps, ss; filling=fill)
     )
-    if ss === U1Irrep && ps !== SU2Irrep 
+    if ps !== SU2Irrep  &&  ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
     end
     return ops
@@ -191,8 +191,10 @@ and interaction parameters, taking into account particle and spin symmetries.
         - `filling`            - particle filling
     - `calc.model` : Model parameters, which include:
         - `bands` - number of orbitals per unit cell
-        - `t`     - hopping matrix or list of hopping terms
-        - `U`     - two-body interaction tensor
+        - `t`      - hopping matrix or list of hopping terms
+        - `U`      - two-body interaction tensor
+        - `V`      - three-body interaction tensor
+        - `(J,M0)` - inter-chain Hunds and initial staggerd magnetization
 
 # Returns
 - `H` : The Hamiltonian as an Matrix Product Operator.
@@ -239,11 +241,10 @@ function hamiltonian(calc::CalcConfig)
         end for ((i,j,k,l,m,n), V_ijklmn) in collect(pairs(V)); init=0*ops.n{lattice[1]})
     end
 
-    # --- Staggered magnetization field term: 2 * J_inter * Ms * (-1)^i Sz_i
+    # --- Staggered magnetization field term ---
     J_inter, Ms = calc.model.J_M0
     if Ms != 0.0 && J_inter != 0.0
-        println("Using staggered magn field")
-        H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width * bands); init=0*ops.n{lattice[1]})
+        H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width*bands); init=0*ops.n{lattice[1]})
     end
 
     return H

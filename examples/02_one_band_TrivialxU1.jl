@@ -1,5 +1,5 @@
 using HubbardTN
-using TensorKit, MPSKit, Statistics
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = Trivial
@@ -22,22 +22,21 @@ H = gs["ham"]
 
 E0 = expectation_value(ψ, H)
 E = sum(real(E0)) / length(H)
-println("Groundstate energy: $E")
+println("Groundstate energy: ", E)
 
 dim = dim_state(ψ)
-b = mean(dim)
-println("Mean bond dimension: $b")
+println("Max bond dimension: ", maximum(dim))
 
-e = entanglement_spectrum(ψ)
-println("Entanglement spectrum: $e")
+ent = entanglement_spectrum(ψ)
+println("Entanglement spectrum: \n")
+display(ent)
 
-Ne = density_e(ψ,symm)
+Ne = density_e(ψ, symm)
 println("Number of electrons per site: ", Ne)
-println("Mean number of electrons = ", mean(Ne))
 
-u, d = density_spin(ψ,symm)
-println("Spin up: $u")
-println("Spin down: $d")
+u, d = density_spin(ψ, symm)
+println("Spin up per site: ", u)
+println("Spin down per site: ", d)
 
-Ms = calc_ms(ψ,symm)
-println("Ms: $Ms")
+Ms = calc_ms(ψ, symm)
+println("Staggered magnetization: ", Ms)
