@@ -390,7 +390,7 @@ function number_e(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Se
         number_down(T, particle_symmetry, spin_symmetry; kwargs...)
 end
 function number_e(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
-    t = single_site_operator(T, Trivial, SU2Irrep; kwargs...)
+    t = single_site_operator(T, Trivial, SU2Irrep)
     I = sectortype(t)
     block(t, I(1, 1 // 2))[1, 1] = 1
     block(t, I(0, 0))[2, 2] = 2
@@ -434,11 +434,7 @@ end
 """
     Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
 
-Return the one-body spin operator
-    Sᶻ = 1/2 (n_↑ - n_↓)
-
-This implementation is fully general and works for every symmetry
-combination for which `number_up` and `number_down` are defined.
+Return the one-body spin operator Sᶻ = 1/2 (n_↑ - n_↓).
 """
 Sz(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = Sz(ComplexF64, P, S; kwargs...)
 function Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)

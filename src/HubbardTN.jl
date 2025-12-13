@@ -1,7 +1,7 @@
 module HubbardTN
 
 export hubbard_space, c_plusmin_up, c_plusmin_down, c_minplus_up, c_minplus_down
-export c_plusmin, c_minplus, number_up, number_down, number_e, number_pair
+export c_plusmin, c_minplus, number_up, number_down, number_e, number_pair, Sz
 export SymmetryConfig, ModelParams, CalcConfig
 export hamiltonian, compute_groundstate, find_chemical_potential
 export compute_excitations, compute_domainwall
