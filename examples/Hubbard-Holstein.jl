@@ -11,13 +11,13 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 # Step 2: Set up model parameters
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
-W_G_cutoff = (1.0,0.0,4.0)
+W_G_cutoff = (1.0,2.0,10.0)
 
 model = HolsteinParams(t, U; W_G_cutoff)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
-gs = compute_groundstate(calc; svalue = 4.0)
+gs = compute_groundstate(calc; svalue = 3.0)
 ψ = gs["groundstate"]
 H = gs["ham"]
 

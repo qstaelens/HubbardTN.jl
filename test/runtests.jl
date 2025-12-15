@@ -26,6 +26,9 @@ ti = time()
     if GROUP == "ALL" || GROUP == "ThreeBody"
         @time include("ThreeBody.jl")
     end
+    if GROUP == "ALL" || GROUP == "HubbardHolstein.jl"
+        @time include("HubbardHolstein.jl")
+    end
 end
 
 ti = time() - ti
