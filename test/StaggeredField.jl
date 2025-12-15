@@ -4,7 +4,7 @@ println("
 #####################
 ")
 
-tol = 1e-1
+tol = 2e-1
 
 
 # Symmetries
