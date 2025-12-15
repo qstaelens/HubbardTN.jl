@@ -191,13 +191,14 @@ function calculate_filling(calc::CalcConfig,
 end
 
 """
-    find_chemical_potential(calc::CalcConfig;
+    find_chemical_potential(calc::CalcConfig, 
+                            filling::Float64;
+                            mu_lower_init::Float64=0.0,
+                            mu_upper_init::Float64=1.0,
                             svalue::Float64=2.0,
-                            tol::Float64=1e-8,
-                            init_state::Union{Nothing, InfiniteMPS}=nothing,
-                            maxiter::Int=1000,
-                            max_init_dim::Int=50,
-                            verbosity::Int=0)
+                            tol_filling::Float64=1e-8, 
+                            maxiter::Int64=25,
+                            verbosity::Int64=0)
                             
 Find the chemical potential μ that yields the desired filling in the ground state.
 """
