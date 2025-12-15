@@ -17,16 +17,22 @@ println("Starting tests")
 ti = time()
 
 @time begin
-    if GROUP == "ALL" || GROUP == "OneBand"
+    if GROUP == "ALL" || GROUP == "ONEBAND"
         @time include("OneBand.jl")
     end
-    if GROUP == "ALL" || GROUP == "MultiBand"
+    if GROUP == "ALL" || GROUP == "MULTIBAND"
         @time include("MultiBand.jl")
     end
     if GROUP == "ALL" || GROUP == "ThreeBody"
         @time include("ThreeBody.jl")
     end
-    if GROUP == "ALL" || GROUP == "HubbardHolstein.jl"
+    if GROUP == "ALL" || GROUP == "CHEMICALPOTENTIAL"
+        @time include("ChemicalPotential.jl")
+    end
+    if GROUP == "ALL" || GROUP == "STAGGEREDFIELD"
+        @time include("StaggeredField.jl")
+    end
+    if GROUP == "ALL" || GROUP == "HUBBARDHOLSTEIN.jl"
         @time include("HubbardHolstein.jl")
     end
 end
@@ -38,7 +44,6 @@ println(round(ti/60, digits = 3), " minutes")
 println("
 Not included in tests:
 - Equivalence of different symmetries.
-- find_chemical_potential().
 - compute_domainwall().
 - Saving tools.
 ")

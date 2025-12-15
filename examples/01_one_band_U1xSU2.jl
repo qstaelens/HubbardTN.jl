@@ -3,7 +3,7 @@ using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep
-spin_symmetry = U1Irrep
+spin_symmetry = Su2Irrep
 cell_width = 2
 filling = (1, 1)
 
@@ -23,21 +23,17 @@ H = gs["ham"]
 
 E0 = expectation_value(ψ, H)
 E = sum(real(E0)) / length(H)
-println("Groundstate energy: $E")
+println("Groundstate energy: ", E)
 
 dim = dim_state(ψ)
-b = max(dim)
-println("Max bond dimension: $b")
+println("Max bond dimension: ", maximum(dim))
 
-e = entanglement_spectrum(ψ)
-println("Entanglement spectrum: $e")
+ent = entanglement_spectrum(ψ)
+println("Entanglement spectrum: \n")
+display(ent)
 
-Ne = density_e(ψ,symm)
+Ne = density_e(ψ, symm)
 println("Number of electrons per site: ", Ne)
-
-u, d = density_spin(ψ,symm)
-println("Spin up: $u")
-println("Spin down: $d")
 
 # Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × U1Irrep(0) sector
 momenta = collect(range(0, 2π, length = 10))

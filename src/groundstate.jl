@@ -145,118 +145,163 @@ function compute_groundstate(
     return Dict("groundstate" => ψ, "environments" => envs, "ham" => H, "error" => δ)
 end
 
+
+###########################
+# Find chemical potential #
+###########################
+
+function change_chemical_potential(model::ModelParams, μ::Float64)
+    bands = model.bands
+    t = model.t
+    U = model.U
+    V = model.V
+    J_M0 = model.J_M0
+
+    @assert length(μ) == bands "Length of μ vector must match number of bands."
+
+    t_new = copy(t)
+    μ_old = Inf
+    for i in 1:bands
+        if !haskey(t_new, (i,i))
+            t_new[(i,i)] = 0.0
+        end
+        μ_old = min(t_new[(i,i)], μ_old)
+    end
+
+    for i in 1:bands
+        # necessary to keep Δ energy constant between bands
+        t_new[(i,i)] += μ - μ_old
+    end
+
+    return ModelParams(bands, t_new, U, V, J_M0)
+end
+
+function calculate_filling(calc::CalcConfig, 
+                            μ::Float64; 
+                            svalue::Float64=2.0, 
+                            init_state::Union{Nothing, InfiniteMPS}=nothing
+                        )
+    simul = CalcConfig(calc.symmetries, change_chemical_potential(calc.model, μ))
+    gs = compute_groundstate(simul; svalue=svalue, init_state=init_state)
+    ψ = gs["groundstate"]
+    filling = sum(density_e(ψ, calc.symmetries)) / length(ψ)
+
+    return filling, ψ
+end
+
 """
-    find_chemical_potential(calc::CalcConfig;
+    find_chemical_potential(calc::CalcConfig, 
+                            filling::Float64;
+                            mu_lower_init::Float64=0.0,
+                            mu_upper_init::Float64=1.0,
                             svalue::Float64=2.0,
-                            tol::Float64=1e-8,
-                            init_state::Union{Nothing, InfiniteMPS}=nothing,
-                            maxiter::Int=1000,
-                            max_init_dim::Int=50,
-                            verbosity::Int=0)
+                            tol_filling::Float64=1e-8, 
+                            maxiter::Int64=25,
+                            verbosity::Int64=0)
                             
 Find the chemical potential μ that yields the desired filling in the ground state.
 """
+
 function find_chemical_potential(
-                calc::CalcConfig;
+                calc::CalcConfig, 
+                filling::Float64;
+                mu_lower_init::Float64=0.0,
+                mu_upper_init::Float64=1.0,
                 svalue::Float64=2.0,
-                tol::Float64=1e-8, 
-                init_state::Union{Nothing, InfiniteMPS}=nothing,
-                maxiter::Int64=1000,
-                max_init_dim::Int=50,
+                tol_filling::Float64=1e-8, 
+                maxiter::Int64=25,
                 verbosity::Int64=0
             )
-    error("Not yet implemnted.")
-    verbosity_mu = get(simul.kwargs, :verbosity_mu, 0)
-    t = simul.t
-    u = simul.u
-    s = simul.svalue
-    bond_dim=simul.bond_dim 
-    period = simul.period
-    kwargs = simul.kwargs
 
-    if simul.μ !== nothing
-        simul2 = OBC_Sim2(t,u,simul.μ,s,bond_dim,period;kwargs)
-        dictionary = compute_groundstate(simul2; tol=tol, verbosity=verbosity, maxiter=maxiter);
-        dictionary["μ"] = simul.μ
-    else 
-        f = simul.f
-        tol_mu = get(kwargs, :tol_mu, 1e-8)
-        maxiter_mu = get(kwargs, :maxiter_mu, 20)
-        step_size = get(kwargs, :step_size, 1.0)
-        flag = false
-
-        lower_bound = get(simul.kwargs, :lower_mu, 0.0)
-        upper_bound = get(simul.kwargs, :upper_mu, 0.0)
-        mid_point = (lower_bound + upper_bound)/2
-        i = 1
-
-        simul2 = OBC_Sim2(t,u,lower_bound,s,bond_dim,period;kwargs)
-        dictionary_l = compute_groundstate(simul2; tol=tol, verbosity=verbosity, maxiter=maxiter);
-        dictionary_u = deepcopy(dictionary_l)
-        dictionary_sp = deepcopy(dictionary_l)
-        while i<=maxiter_mu
-            if abs(density_state(dictionary_u["groundstate"]) - f) < tol_mu
-                flag=true
-                dictionary_sp = deepcopy(dictionary_u)
-                mid_point = upper_bound
-                break
-            elseif abs(density_state(dictionary_l["groundstate"]) - f) < tol_mu
-                flag=true
-                dictionary_sp = deepcopy(dictionary_l)
-                mid_point = lower_bound
-                break
-            elseif density_state(dictionary_u["groundstate"]) < f
-                lower_bound = copy(upper_bound)
-                upper_bound += step_size
-                simul2 = OBC_Sim2(t,u,upper_bound,s,bond_dim,period;kwargs)
-                dictionary_u = compute_groundstate(simul2; tol=tol, verbosity=verbosity, maxiter=maxiter)
-            elseif density_state(dictionary_l["groundstate"]) > f
-                upper_bound = copy(lower_bound)
-                lower_bound -= step_size
-                simul2 = OBC_Sim2(t,u,lower_bound,s,bond_dim,period;kwargs)
-                dictionary_l = compute_groundstate(simul2; tol=tol, verbosity=verbosity, maxiter=maxiter)
-            else
-                break
-            end
-            verbosity_mu>0 && @info "Iteration μ: $i => Lower bound: $lower_bound; Upper bound: $upper_bound"
-            i+=1
-        end
-        if upper_bound>0.0
-            value = "larger"
-            dictionary = dictionary_u
-        else
-            value = "smaller"
-            dictionary = dictionary_l
-        end
-        if i>maxiter_mu
-            max_value = (i-1)*step_size
-            @warn "The chemical potential is $value than: $max_value. Increase the stepsize."
-        end
-
-        while abs(density_state(dictionary["groundstate"]) - f)>tol_mu && i<=maxiter_mu && !flag
-            mid_point = (lower_bound + upper_bound)/2
-            simul2 = OBC_Sim2(t,u,mid_point,s,bond_dim,period;kwargs)
-            dictionary = compute_groundstate(simul2)
-            if density_state(dictionary["groundstate"]) < f
-                lower_bound = copy(mid_point)
-            else
-                upper_bound = copy(mid_point)
-            end
-            verbosity_mu>0 && @info "Iteration μ: $i => Lower bound: $lower_bound; Upper bound: $upper_bound"
-            i+=1
-        end
-        if i>maxiter_mu
-            @warn "The chemical potential lies between $lower_bound and $upper_bound, but did not converge within the tolerance. Increase maxiter_mu."
-        else
-            verbosity_mu>0 && @info "Final chemical potential = $mid_point"
-        end
-
-        if flag
-            dictionary = dictionary_sp
-        end
-
-        dictionary["μ"] = mid_point
+    @assert 0.0 < filling < 2.0 "Filling must be between 0 and 2 electrons per site."
+    if calc.symmetries.particle_symmetry != Trivial
+        error("Chemical potential search only implemented for trivial particle symmetry.")
     end
 
-    return dictionary
+    # --- Perform bisection method to find μ iteratively ---
+
+    # Initial bounds
+    mu_lower = mu_lower_init
+    mu_upper = mu_upper_init
+    N_lower, ψ_lower = calculate_filling(calc, mu_lower; svalue=svalue)
+    N_upper, ψ_upper = calculate_filling(calc, mu_upper; svalue=svalue)
+
+    if abs(N_upper - filling) < tol_filling
+        verbosity > 0 && @info "Converged in 0 iterations. μ = $mu_upper, Filling = $N_upper."
+        return mu_upper
+    end
+    if abs(N_lower - filling) < tol_filling
+        verbosity > 0 && @info "Converged in 0 iterations. μ = $mu_lower, Filling = $N_lower."
+        return mu_lower
+    end
+
+    # Bracketing filling interval
+    while (N_lower - filling) * (N_upper - filling) > 0.0
+        # If the target filling is not bracketed, expand the interval.
+        if N_lower > filling # Both fillings are too high, increase mu_lower
+            mu_diff = abs(mu_upper - mu_lower)
+            mu_upper = mu_lower
+            mu_lower -= mu_diff * 2.0 # Expand downwards
+            verbosity > 0 && @info "Target filling $filling not bracketed. Decreasing mu_lower to $mu_lower."
+            N_upper = N_lower
+            N_lower, ψ_lower = calculate_filling(calc, mu_lower; svalue=svalue, init_state=ψ_lower)
+        else # Both fillings are too low, increase mu_upper
+            mu_diff = abs(mu_upper - mu_lower)
+            mu_lower = mu_upper
+            mu_upper += mu_diff * 2.0 # Expand upwards
+            verbosity > 0 && @info "Target filling $filling not bracketed. Increasing mu_upper to $mu_upper."
+            N_lower = N_upper
+            N_upper, ψ_upper = calculate_filling(calc, mu_upper; svalue=svalue, init_state=ψ_upper)
+        end
+        if abs(N_upper - filling) < tol_filling
+            verbosity > 0 && @info "Converged in 0 iterations. μ = $mu_upper, Filling = $N_upper."
+            return mu_upper
+        end
+        if abs(N_lower - filling) < tol_filling
+            verbosity > 0 && @info "Converged in 0 iterations. μ = $mu_lower, Filling = $N_lower."
+            return mu_lower
+        end
+        if abs(mu_upper - mu_lower) > 1e3 # Safety break for too large range
+            error("Bisection range expanded too much (range [$mu_lower, $mu_upper]). Check initial guess or model parameters.")
+        end
+    end
+
+    verbosity > 0 && @info "Initial bracket: μ ∈ [$mu_lower, $mu_upper], Filling ∈ [$N_lower, $N_upper]"
+
+    # Bisection Iteration
+    mu_mid = (mu_lower + mu_upper) / 2.0
+    ψ_mid = ψ_lower
+
+    for i in 1:maxiter
+        mu_mid = (mu_lower + mu_upper) / 2.0
+        N_mid, ψ_mid = calculate_filling(calc, mu_mid; svalue=svalue, init_state=ψ_mid)
+
+        # Check for convergence
+        fill_diff = abs(N_mid - filling)
+        if fill_diff < tol_filling
+            verbosity > 0 && @info "Converged in $i iterations. μ = $mu_mid, Filling = $N_mid."
+            return mu_mid
+        end
+
+        # Bisection logic: Narrow the interval
+        if (N_mid - filling) * (N_lower - filling) < 0
+            mu_upper = mu_mid
+            N_upper = N_mid
+        else
+            mu_lower = mu_mid
+            N_lower = N_mid
+        end
+
+        verbosity > 0 && @info "Iter $i: μ ∈ [$mu_lower, $mu_upper], N ∈ [$N_lower, $N_upper]. Diff: $fill_diff"
+
+        # Secondary convergence check based on mu interval width
+        if abs(mu_upper - mu_lower) < tol_filling * 10 # Heuristic μ tolerance
+            @warn "μ interval width converged (width < $(tol_filling * 10)). μ = $mu_mid, Filling = $N_mid."
+            return mu_mid
+        end
+    end
+
+    @warn "Bisection did not converge in $maxiter iterations. μ ∈ [$mu_lower, $mu_upper], N ∈ [$N_lower, $N_upper]. Final μ = $mu_mid."
+
+    return mu_mid
 end

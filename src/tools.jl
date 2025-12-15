@@ -110,7 +110,6 @@ Compute the staggered magnetization in an InfiniteMPS.
 function calc_ms(ψ::InfiniteMPS, symm::SymmetryConfig)
     up, down = density_spin(ψ, symm)
     Mag = up - down
-    #println(Mag)
     if !all(x -> isapprox(abs(x),abs(Mag[1,1]),rtol=10^(-6)), vec(Mag))
         @warn "Staggerd magnetization varies across unit cell: returning value for first site only."
     end
@@ -165,7 +164,7 @@ function save_state(ψ::InfiniteMPS, path::String, name::String)
     for i in 1:length(ψ)
         d = convert(Dict,ψ.AL[i])
         @save joinpath(path,"state$i.jld2") d
-        println("State $i saved.")
+        @info "State $i saved."
     end
 end
 
