@@ -32,6 +32,9 @@ ti = time()
     if GROUP == "ALL" || GROUP == "STAGGEREDFIELD"
         @time include("StaggeredField.jl")
     end
+    if GROUP == "ALL" || GROUP == "HUBBARDHOLSTEIN"
+        @time include("HubbardHolstein.jl")
+    end
 end
 
 ti = time() - ti

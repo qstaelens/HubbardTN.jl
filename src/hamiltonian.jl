@@ -203,7 +203,7 @@ and interaction parameters, taking into account particle and spin symmetries.
 - Lattice sites are represented using an `InfiniteChain` of length `cell_width * bands`.
 - The resulting MPO can be used directly for DMRG, VUMPS, or other tensor network calculations.
 """
-function hamiltonian(calc::CalcConfig)
+function hamiltonian(calc::CalcConfig{ModelParams{T}}) where {T}
     empty!(two_body_cache)
     empty!(three_body_cache)
 
@@ -249,3 +249,75 @@ function hamiltonian(calc::CalcConfig)
 
     return H
 end
+
+function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
+    empty!(two_body_cache)
+    empty!(three_body_cache)
+
+    symm  = calc.symmetries
+    ops = build_ops(symm)
+
+    Ps  = hubbard_space(Trivial, U1Irrep; filling = symm.filling)
+    Psb = holstein_space(Trivial, U1Irrep, calc.model.max_b)
+
+    # fixed geometry: site 1 = Hubbard, 2 = phonon, 3 = Hubbard, 4 = phonon
+    spaces = [Ps, Psb, Ps, Psb]
+
+    bmin   = b_min(Trivial, U1Irrep, calc.model.max_b)
+    bplus  = b_plus(Trivial, U1Irrep, calc.model.max_b)
+    nb  = number_b(Trivial, U1Irrep, calc.model.max_b)
+
+    # chemical potential
+    μ = calc.model.t[(1,1)]
+
+    H = InfiniteMPOHamiltonian(
+        spaces, (1,) => -μ * ops.n
+    )
+    H += InfiniteMPOHamiltonian(
+        spaces, (3,) => -μ * ops.n
+    )
+
+    # hopping: model.t[(1,2)] ↦ sites (1,3)
+    t = calc.model.t[(1,2)]
+
+    H += InfiniteMPOHamiltonian(
+        spaces, (1,3) => -t * ops.c⁺c
+    )
+    H += InfiniteMPOHamiltonian(
+        spaces, (3,1) => -t * ops.c⁺c
+    )
+
+    H += InfiniteMPOHamiltonian(
+        spaces, (3,5) => -t * ops.c⁺c
+    )
+    H += InfiniteMPOHamiltonian(
+        spaces, (5,3) => -t * ops.c⁺c
+    )
+
+    # Hubbard U (single-band, on-site)
+    for ((i,j,k,l), U_ijkl) in pairs(calc.model.U)
+        # on-site term only
+        if i == j == k == l == 1
+            H += InfiniteMPOHamiltonian(
+                spaces, (1,) => U_ijkl * ops.n_pair
+            )
+            H += InfiniteMPOHamiltonian(
+                spaces, (3,) => U_ijkl * ops.n_pair
+            )
+        end
+    end
+
+    # phonon energy
+    H += InfiniteMPOHamiltonian(spaces, (2,) => calc.model.w * nb)
+    H += InfiniteMPOHamiltonian(spaces, (4,) => calc.model.w * nb)
+
+    # Holstein coupling
+    H += InfiniteMPOHamiltonian(
+        spaces, (1,2) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
+    )
+    H += InfiniteMPOHamiltonian(
+        spaces, (3,4) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
+    )
+    return H
+end
+
