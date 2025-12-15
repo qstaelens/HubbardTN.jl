@@ -45,9 +45,9 @@ function maximal_virtualspace(::Type{SU2Irrep}, ::Type{SU2Irrep}, total_width::I
     return build_virtualspace(FermionParity ⊠ SU2Irrep ⊠ SU2Irrep, (0:1, 0:1//2:3, 0:1//2:3), maxdim)
 end
 
-function initialize_mps(symm::SymmetryConfig, total_width::Int; max_dimension::Int=50)
-    ps = hubbard_space(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-    Ps = [ps for _ in 1:total_width]
+function initialize_mps(H::InfiniteMPOHamiltonian,symm::SymmetryConfig; max_dimension::Int=50)
+    Ps = physicalspace.(parent(H))
+    total_width = length(Ps)
 
     # Compute left and right fusion spaces
     V_right = accumulate(fuse, Ps)
@@ -117,13 +117,12 @@ function compute_groundstate(
     H = hamiltonian(calc)
 
     symm = calc.symmetries
-    total_width = calc.model.bands * symm.cell_width
-    ψ₀ = isnothing(init_state) ? initialize_mps(symm, total_width; max_dimension=max_init_dim) : init_state
+    ψ₀ = isnothing(init_state) ? initialize_mps(H, symm; max_dimension=max_init_dim) : init_state
 
     schmidtcut = 10.0^(-svalue)
     tol = max(tol, schmidtcut/10)
     
-    if total_width > 1
+    if length(H) > 1
         ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=truncbelow(schmidtcut), tol=tol, verbosity=verbosity))
     else
         ψ₀, envs, = find_groundstate(ψ₀, H, VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity))
