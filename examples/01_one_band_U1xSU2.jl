@@ -35,7 +35,7 @@ display(ent)
 Ne = density_e(ψ, symm)
 println("Number of electrons per site: ", Ne)
 
-# Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × U1Irrep(0) sector
+# Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × SU2Irrep(0) sector
 momenta = collect(range(0, 2π, length = 10))
 charges = [0.0, 0.0, 0.0]
 ex = compute_excitations(gs, momenta, charges)

@@ -31,7 +31,7 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e(ψ,symm)
+Ne = density_e(ψ, symm)
 println("Number of electrons per site: ", Ne)
 
 u, d = density_spin(ψ, symm)

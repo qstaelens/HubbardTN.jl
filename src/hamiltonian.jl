@@ -257,18 +257,15 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     symm  = calc.symmetries
     ops = build_ops(symm)
 
-    ω0, g, cutoff = calc.model.W_G_cutoff
-    cutoff = Int(cutoff)
-
     Ps  = hubbard_space(Trivial, U1Irrep; filling = symm.filling)
-    Psb = holstein_space(Trivial, U1Irrep; cutoff=cutoff)
+    Psb = holstein_space(Trivial, U1Irrep, calc.model.max_b)
 
     # fixed geometry: site 1 = Hubbard, 2 = phonon, 3 = Hubbard, 4 = phonon
     spaces = [Ps, Psb, Ps, Psb]
 
-    bmin   = boson_ann(Trivial, U1Irrep; cutoff=cutoff)
-    bplus  = boson_cre(Trivial, U1Irrep; cutoff=cutoff)
-    nb  = boson_number(Trivial, U1Irrep; cutoff=cutoff)
+    bmin   = b_min(Trivial, U1Irrep, calc.model.max_b)
+    bplus  = b_plus(Trivial, U1Irrep, calc.model.max_b)
+    nb  = number_b(Trivial, U1Irrep, calc.model.max_b)
 
     # chemical potential
     μ = calc.model.t[(1,1)]
@@ -311,15 +308,15 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     end
 
     # phonon energy
-    H += InfiniteMPOHamiltonian(spaces, (2,) => ω0 * nb)
-    H += InfiniteMPOHamiltonian(spaces, (4,) => ω0 * nb)
+    H += InfiniteMPOHamiltonian(spaces, (2,) => calc.model.w * nb)
+    H += InfiniteMPOHamiltonian(spaces, (4,) => calc.model.w * nb)
 
     # Holstein coupling
     H += InfiniteMPOHamiltonian(
-        spaces, (1,2) => g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
+        spaces, (1,2) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
     )
     H += InfiniteMPOHamiltonian(
-        spaces, (3,4) => g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
+        spaces, (3,4) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
     )
     return H
 end

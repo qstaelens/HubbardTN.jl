@@ -117,12 +117,13 @@ function compute_groundstate(
     H = hamiltonian(calc)
 
     symm = calc.symmetries
+    total_width = calc.model.bands * symm.cell_width
     ψ₀ = isnothing(init_state) ? initialize_mps(H, symm; max_dimension=max_init_dim) : init_state
 
     schmidtcut = 10.0^(-svalue)
     tol = max(tol, schmidtcut/10)
     
-    if length(H) > 1
+    if total_width > 1
         ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=truncbelow(schmidtcut), tol=tol, verbosity=verbosity))
     else
         ψ₀, envs, = find_groundstate(ψ₀, H, VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity))
@@ -201,7 +202,6 @@ end
                             
 Find the chemical potential μ that yields the desired filling in the ground state.
 """
-
 function find_chemical_potential(
                 calc::CalcConfig, 
                 filling::Float64;

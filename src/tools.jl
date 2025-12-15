@@ -51,10 +51,8 @@ end
 Compute the number of phonons per site in the unit cell.
 """
 
-function density_b(ψ::InfiniteMPS, symm::SymmetryConfig; W_G_cutoff::NTuple{3, T}=(0.0,0.0,0.0)) where {T<:AbstractFloat}
-    ω0, g, cutoff = W_G_cutoff
-    cutoff = Int(cutoff)
-    n = boson_number(symm.particle_symmetry, symm.spin_symmetry; cutoff = cutoff)
+function density_b(ψ::InfiniteMPS, symm::SymmetryConfig, max_b::Int64)
+    n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
 
     Nb = zeros(1,symm.cell_width)
     for j in 1:symm.cell_width

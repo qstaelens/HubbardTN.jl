@@ -258,26 +258,24 @@ struct HolsteinParams{T<:AbstractFloat}
     bands::Int64
     t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
     U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
-    V::Dict{NTuple{6, Int64}, T}          # 3-body interaction V_ijklmn c⁺_i c⁺_j c⁺_k c_l c_m c_n
-    W_G_cutoff::NTuple{3, T}              # phonon frequency omega, electron phonon coupling strength, cutoff: max allowed phonons per site
+    w::T                                  # Phonon frequency
+    g::T                                  # Electron-phonon coupling strength
+    max_b::Int64                          # Max allowed phonons per site
 
-    function HolsteinParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
+    function HolsteinParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, w::T, g::T, max_b::Int64) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, Dict(), (0.0,0.0,0.0))
-    end
-    function HolsteinParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, W_G_cutoff::NTuple{3, T}) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, Dict(), W_G_cutoff)
+        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
+        new{T}(bands, t, U, w, g, max_b)
     end
 end
 # Constructors
-function HolsteinParams(t::Vector{T}, U::Vector{T}; W_G_cutoff::NTuple{3, T}=(0.0,0.0,0.0)) where {T<:AbstractFloat}
+function HolsteinParams(t::Vector{T}, U::Vector{T}, w::T=0.0, g::T=0.0, max_b::Int64=1) where {T<:AbstractFloat}
     interaction = Dict{NTuple{4,Int},T}()
     for (i, val) in enumerate(U)
         addU!(interaction, (1,i,i,1), val)
-        addU!(interaction, (i,1,1,i), val)  # double counting: factor 1/2 added later
+        addU!(interaction, (i,1,1,i), val)
     end
-    return HolsteinParams(1, hopping_matrix2dict(t), interaction, W_G_cutoff)
+    return HolsteinParams(1, hopping_matrix2dict(t), interaction, w, g, max_b)
 end
 
 

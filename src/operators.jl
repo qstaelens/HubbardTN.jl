@@ -48,7 +48,7 @@ function hubbard_space(::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs...)
 end
 
 """
-    holstein_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector};cutoff::Int)
+    holstein_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int)
 
 Local Hilbert space for a Holstein phonon truncated at `cutoff` bosons.
 
@@ -56,12 +56,12 @@ Implemented ONLY for:
     particle_symmetry = Trivial
     spin_symmetry     = U1Irrep
 """
-function holstein_space(::Type{Trivial}, ::Type{U1Irrep}; cutoff::Int)
-    return Vect[FermionParity ⊠ U1Irrep]((0, 0) => cutoff + 1)
+function holstein_space(::Type{Trivial}, ::Type{U1Irrep}, max_b::Int64)
+    return Vect[FermionParity ⊠ U1Irrep]((0, 0) => max_b + 1)
 end
 
 # All other symmetry combinations → explicit error
-function holstein_space(ps::Type{<:Sector}, ss::Type{<:Sector}; cutoff::Int)
+function holstein_space(ps::Type{<:Sector}, ss::Type{<:Sector}, max_b::Int64)
     error("Holstein boson space not implemented for symmetry combination: particle=$ps, spin=$ss. Only (Trivial, U1Irrep) is supported.")
 end
 
@@ -85,9 +85,9 @@ function two_site_operator(
 end
 
 function boson_single_site_operator(
-        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; cutoff::Int
+        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64
     )
-    V = holstein_space(particle_symmetry, spin_symmetry; cutoff=cutoff)
+    V = holstein_space(particle_symmetry, spin_symmetry, max_b)
     return zeros(T, V ← V)
 end
 
@@ -471,33 +471,33 @@ end
 
 Phonon number operator n̂ with n̂|n⟩=n|n⟩.
 """
-boson_number(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = boson_number(ComplexF64, P, S; kwargs...)
-function boson_number(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; cutoff::Int)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry; cutoff=cutoff)
+number_b(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = number_b(ComplexF64, P, S, max_b)
+function number_b(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
+    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b)
     I = sectortype(t)
-    for n in 1:cutoff
+    for n in 1:max_b
         block(t, I(0, 0))[n+1, n+1] = n
     end
     return t
 end
 
-"""Boson annihilation operator b with b|n⟩=√n|n−1⟩."""
-boson_ann(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = boson_ann(ComplexF64, P, S; kwargs...)
-function boson_ann(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; cutoff::Int)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry; cutoff=cutoff)
+"""Boson annihilation operator b with b|n⟩=√n|n-1⟩."""
+b_min(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = b_min(ComplexF64, P, S, max_b)
+function b_min(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
+    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b::Int64)
     I = sectortype(t)
-    for n in 1:cutoff
+    for n in 1:max_b
         block(t, I(0, 0))[n, n+1] = sqrt(n)
     end
     return t
 end
 
 """Boson creation operator b† with b†|n⟩=√(n+1)|n+1⟩."""
-boson_cre(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = boson_cre(ComplexF64, P, S; kwargs...)
-function boson_cre(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; cutoff::Int)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry; cutoff=cutoff)
+b_plus(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = b_plus(ComplexF64, P, S, max_b)
+function b_plus(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
+    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b)
     I = sectortype(t)
-    for n in 1:cutoff
+    for n in 1:max_b
         block(t, I(0, 0))[n+1, n] = sqrt(n)
     end
     return t
