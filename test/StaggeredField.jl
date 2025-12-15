@@ -35,7 +35,7 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
 
         # Step 3: Compute the ground state
         gs = compute_groundstate(calc; svalue = svalue, init_state=ψ_init)
-
+        
         ψ = gs["groundstate"]
         ψ_init = ψ
 
@@ -43,12 +43,12 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         E0 = expectation_value(ψ, H)
         E = sum(real(E0)) / length(H)
         push!(E_list, E)
-
+        
         # Step 4: Calculate new Ms
         Ms_new = calc_ms(ψ, symm)
         Ms_change = abs(Ms_new - Ms)
         push!(Ms_list, Ms_new)
-
+        
         # Check for convergence
         if Ms_change < tol
             break

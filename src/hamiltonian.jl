@@ -191,8 +191,8 @@ and interaction parameters, taking into account particle and spin symmetries.
         - `filling`            - particle filling
     - `calc.model` : Model parameters, which include:
         - `bands` - number of orbitals per unit cell
-        - `t`     - hopping matrix or list of hopping terms
-        - `U`     - two-body interaction tensor
+        - `t`      - hopping matrix or list of hopping terms
+        - `U`      - two-body interaction tensor
         - `V`      - three-body interaction tensor
         - `(J,M0)` - inter-chain Hunds and initial staggerd magnetization
 

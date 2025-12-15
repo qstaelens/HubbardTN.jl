@@ -172,7 +172,7 @@ function change_chemical_potential(model::ModelParams, μ::Float64)
         # necessary to keep Δ energy constant between bands
         t_new[(i,i)] += μ - μ_old
     end
-
+    
     return ModelParams(bands, t_new, U, V, J_M0)
 end
 
@@ -262,10 +262,10 @@ function find_chemical_potential(
             return mu_lower
         end
         if abs(mu_upper - mu_lower) > 1e3 # Safety break for too large range
-            error("Bisection range expanded too much (range [$mu_lower, $mu_upper]). Check initial guess or model parameters.")
+             error("Bisection range expanded too much (range [$mu_lower, $mu_upper]). Check initial guess or model parameters.")
         end
     end
-
+    
     verbosity > 0 && @info "Initial bracket: μ ∈ [$mu_lower, $mu_upper], Filling ∈ [$N_lower, $N_upper]"
 
     # Bisection Iteration
@@ -275,7 +275,7 @@ function find_chemical_potential(
     for i in 1:maxiter
         mu_mid = (mu_lower + mu_upper) / 2.0
         N_mid, ψ_mid = calculate_filling(calc, mu_mid; svalue=svalue, init_state=ψ_mid)
-
+        
         # Check for convergence
         fill_diff = abs(N_mid - filling)
         if fill_diff < tol_filling
