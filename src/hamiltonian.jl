@@ -168,9 +168,11 @@ function build_ops(symm::SymmetryConfig)
     ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
-        n        = number_e(ps, ss; filling=fill),
-        Sz       = Sz(ps, ss; filling=fill)
+        n        = number_e(ps, ss; filling=fill)
     )
+    if ps !== SU2Irrep  &&  ss !== SU2Irrep
+        ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+    end
     return ops
 end
 
