@@ -27,7 +27,7 @@ E_ref = -1.2713317702997016
     @test E0 ≈ E_ref atol=tol
 
     # phonon occupation check
-    Nb = density_b(ψ, symm; W_G_cutoff)
+    Nb = density_b(ψ, symm, max_b)
 
     @test Nb[1] ≈ 0.0 atol=tol
     @test Nb[2] ≈ 0.0 atol=tol
@@ -55,7 +55,7 @@ E_ref = -3.2705801927593416
     @test E0 ≈ E_ref atol=tol
 
     # phonon occupation check
-    Nb = density_b(ψ, symm; W_G_cutoff)
+    Nb = density_b(ψ, symm, max_b)
 
     @test Nb[1] ≈ max_b atol=tol
     @test Nb[2] ≈ max_b atol=tol
@@ -82,8 +82,8 @@ E_ref = -2.038990604938512
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
     @test E0 ≈ E_ref atol=tol
 
-    Ne = density_e_HH(ψ,symm)
-    Nb = density_b(ψ,symm; W_G_cutoff)
+    Ne = density_e_HH(ψ, symm)
+    Nb = density_b(ψ, symm, max_b)
 
     # phonons are activated
     @test Nb[1] > 0.0
