@@ -12,7 +12,7 @@ E_ref = -1.2713317702997016
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
 
-    cutoff = 4
+    cutoff = 4.0
     W_G_cutoff = (1.0, 0.0, cutoff)
 
     model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
@@ -39,7 +39,7 @@ E_ref = -3.2705801927593416
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    cutoff = 4
+    cutoff = 4.0
     W_G_cutoff = (-1.0, 0.0, cutoff)
 
     model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
@@ -66,7 +66,7 @@ E_ref = -2.038990604938512
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    cutoff = 10
+    cutoff = 10.0
     W_G_cutoff = (1.0, 2.0, cutoff)
 
     model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
