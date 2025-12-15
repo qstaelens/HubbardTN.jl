@@ -11,10 +11,11 @@ E_ref = -1.2713317702997016
 @testset "Hubbard–Holstein: g = 0, ω₀ > 0" begin
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
+    w = 1.0
+    g = 0.0
+    max_b = 4
 
-    W_G_cutoff = (1.0, 0.0, 4.0)
-
-    model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
+    model = HolsteinParams([2.0, 1.0], [4.0], w, g, max_b)
     calc  = CalcConfig(symm, model)
 
     gs = compute_groundstate(calc)
@@ -38,10 +39,11 @@ E_ref = -3.2705801927593416
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    cutoff = 4.0
-    W_G_cutoff = (-1.0, 0.0, cutoff)
+    w = -1.0
+    g = 0.0
+    max_b = 4
 
-    model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
+    model = HolsteinParams([2.0, 1.0], [4.0], w, g, max_b)
     calc  = CalcConfig(symm, model)
 
     gs = compute_groundstate(calc)
@@ -55,8 +57,8 @@ E_ref = -3.2705801927593416
     # phonon occupation check
     Nb = density_b(ψ, symm; W_G_cutoff)
 
-    @test Nb[1] ≈ cutoff atol=tol
-    @test Nb[2] ≈ cutoff atol=tol
+    @test Nb[1] ≈ max_b atol=tol
+    @test Nb[2] ≈ max_b atol=tol
 end
 
 E_ref = -2.038990604938512
@@ -65,9 +67,11 @@ E_ref = -2.038990604938512
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    W_G_cutoff = (1.0, 2.0, 10.0)
+    w = 1.0
+    g = 2.0
+    max_b = 10
 
-    model = HolsteinParams([2.0, 1.0], [4.0]; W_G_cutoff)
+    model = HolsteinParams([2.0, 1.0], [4.0], w, g, max_b)
     calc  = CalcConfig(symm, model)
 
     gs = compute_groundstate(calc; svalue = 3.0)
