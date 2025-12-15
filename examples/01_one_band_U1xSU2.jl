@@ -3,7 +3,7 @@ using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = U1Irrep
-spin_symmetry = Su2Irrep
+spin_symmetry = SU2Irrep
 cell_width = 2
 filling = (1, 1)
 
