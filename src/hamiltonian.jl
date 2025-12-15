@@ -252,9 +252,9 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     empty!(three_body_cache)
 
     symm  = calc.symmetries
-    model = calc.model
+    ops = build_ops(symm)
 
-    ω0, g, cutoff = model.W_G_cutoff
+    ω0, g, cutoff = calc.model.W_G_cutoff
     cutoff = Int(cutoff)
 
     Ps  = hubbard_space(Trivial, U1Irrep; filling = symm.filling)
@@ -263,14 +263,12 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     # fixed geometry: site 1 = Hubbard, 2 = phonon, 3 = Hubbard, 4 = phonon
     spaces = [Ps, Psb, Ps, Psb]
 
-    ops = build_ops(symm)
-
     bmin   = boson_ann(Trivial, U1Irrep; cutoff=cutoff)
     bplus  = boson_cre(Trivial, U1Irrep; cutoff=cutoff)
     nb  = boson_number(Trivial, U1Irrep; cutoff=cutoff)
 
     # chemical potential
-    μ = model.t[(1,1)]
+    μ = calc.model.t[(1,1)]
 
     H = InfiniteMPOHamiltonian(
         spaces, (1,) => -μ * ops.n
@@ -280,7 +278,7 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     )
 
     # hopping: model.t[(1,2)] ↦ sites (1,3)
-    t = model.t[(1,2)]
+    t = calc.model.t[(1,2)]
 
     H += InfiniteMPOHamiltonian(
         spaces, (1,3) => -t * ops.c⁺c
@@ -289,14 +287,24 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
         spaces, (3,1) => -t * ops.c⁺c
     )
 
+    H += InfiniteMPOHamiltonian(
+        spaces, (3,5) => -t * ops.c⁺c
+    )
+    H += InfiniteMPOHamiltonian(
+        spaces, (5,3) => -t * ops.c⁺c
+    )
+
     # Hubbard U (single-band, on-site)
-    for ((_,_,_,_), Uval) in model.U
-        H += InfiniteMPOHamiltonian(
-            spaces, (1,) => Uval * ops.n_pair
-        )
-        H += InfiniteMPOHamiltonian(
-            spaces, (3,) => Uval * ops.n_pair
-        )
+    for ((i,j,k,l), U_ijkl) in pairs(calc.model.U)
+        # on-site term only
+        if i == j == k == l == 1
+            H += InfiniteMPOHamiltonian(
+                spaces, (1,) => U_ijkl * ops.n_pair
+            )
+            H += InfiniteMPOHamiltonian(
+                spaces, (3,) => U_ijkl * ops.n_pair
+            )
+        end
     end
 
     # phonon energy

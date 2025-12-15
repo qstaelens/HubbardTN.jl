@@ -11,13 +11,13 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 # Step 2: Set up model parameters
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
-W_G_cutoff = (1.0,0.0,1.0)
+W_G_cutoff = (1.0,0.0,4.0)
 
 model = HolsteinParams(t, U; W_G_cutoff)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
-gs = compute_groundstate(calc)
+gs = compute_groundstate(calc; svalue = 4.0)
 ψ = gs["groundstate"]
 H = gs["ham"]
 
@@ -32,13 +32,14 @@ println("Mean bond dimension: $b")
 e = entanglement_spectrum(ψ)
 println("Entanglement spectrum: $e")
 
-Ne = density_e(ψ,symm)
+Ne = density_e_HH(ψ,symm)
 println("Number of electrons per site: ", Ne)
 println("Mean number of electrons = ", mean(Ne))
 
-u, d = density_spin(ψ,symm)
+Nb = density_b(ψ,symm; W_G_cutoff)
+println("Number of phonons per site: ", Nb)
+println("Mean number of phonons = ", mean(Nb))
+
+u, d = density_spin_HH(ψ,symm)
 println("Spin up: $u")
 println("Spin down: $d")
-
-Ms = calc_ms(ψ,symm)
-println("Ms: $Ms")

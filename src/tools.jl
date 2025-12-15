@@ -34,6 +34,35 @@ function density_e(ψ::InfiniteMPS, symm::SymmetryConfig)
     return Ne
 end
 
+function density_e_HH(ψ::InfiniteMPS, symm::SymmetryConfig)
+    n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
+
+    Ne = zeros(1,symm.cell_width)
+    for j in 1:symm.cell_width
+        Ne[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n))
+    end
+    
+    return Ne
+end
+
+"""
+    density_b(ψ::InfiniteMPS, symm::SymmetryConfig)
+
+Compute the number of phonons per site in the unit cell.
+"""
+
+function density_b(ψ::InfiniteMPS, symm::SymmetryConfig; W_G_cutoff::NTuple{3, T}=(0.0,0.0,0.0)) where {T<:AbstractFloat}
+    ω0, g, cutoff = W_G_cutoff
+    cutoff = Int(cutoff)
+    n = boson_number(symm.particle_symmetry, symm.spin_symmetry; cutoff = cutoff)
+
+    Nb = zeros(1,symm.cell_width)
+    for j in 1:symm.cell_width
+        Nb[1,j] = real(expectation_value(ψ, (j*2) => n))
+    end
+    
+    return Nb
+end
 
 """
     density_spin(ψ::InfiniteMPS, symm::SymmetryConfig)
@@ -53,6 +82,21 @@ function density_spin(ψ::InfiniteMPS, symm::SymmetryConfig)
             Nup[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n_up))
             Ndown[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n_down))
         end
+    end
+
+    return Nup, Ndown
+end
+
+function density_spin_HH(ψ::InfiniteMPS, symm::SymmetryConfig)
+    n_up = number_up(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
+    n_down = number_down(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
+
+    Nup = zeros(1,symm.cell_width);
+    Ndown = zeros(1,symm.cell_width);
+
+    for j in 1:symm.cell_width
+        Nup[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n_up))
+        Ndown[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n_down))
     end
 
     return Nup, Ndown

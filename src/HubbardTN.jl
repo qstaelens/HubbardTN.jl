@@ -7,6 +7,7 @@ export SymmetryConfig, ModelParams, CalcConfig, HolsteinParams
 export hamiltonian, compute_groundstate, find_chemical_potential
 export compute_excitations, compute_domainwall
 export dim_state, density_e, density_spin, calc_ms
+export density_e_HH, density_b, density_spin_HH
 export save_computation, load_computation, save_state, load_state
 
 #using LinearAlgebra
