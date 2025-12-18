@@ -256,6 +256,7 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
 
     symm  = calc.symmetries
     ops = build_ops(symm)
+    @tensor nn[-1 -2; -3 -4] := ops.n[-1; -3] * ops.n[-2; -4]
 
     Ps  = hubbard_space(Trivial, U1Irrep; filling = symm.filling)
     Psb = holstein_space(Trivial, U1Irrep, calc.model.max_b)
@@ -269,41 +270,26 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
 
     # chemical potential
     μ = calc.model.t[(1,1)]
-
-    H = InfiniteMPOHamiltonian(
-        spaces, (1,) => -μ * ops.n
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,) => -μ * ops.n
-    )
+    H = InfiniteMPOHamiltonian(spaces, (1,) => -μ * ops.n)
+    H += InfiniteMPOHamiltonian(spaces, (3,) => -μ * ops.n)
 
     # hopping: model.t[(1,2)] ↦ sites (1,3)
     t = calc.model.t[(1,2)]
-
-    H += InfiniteMPOHamiltonian(
-        spaces, (1,3) => -t * ops.c⁺c
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,1) => -t * ops.c⁺c
-    )
-
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,5) => -t * ops.c⁺c
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (5,3) => -t * ops.c⁺c
-    )
+    H += InfiniteMPOHamiltonian(spaces, (1,3) => -t * ops.c⁺c)
+    H += InfiniteMPOHamiltonian(spaces, (3,1) => -t * ops.c⁺c)
+    H += InfiniteMPOHamiltonian(spaces, (3,5) => -t * ops.c⁺c)
+    H += InfiniteMPOHamiltonian(spaces, (5,3) => -t * ops.c⁺c)
 
     # Hubbard U (single-band, on-site)
     for ((i,j,k,l), U_ijkl) in pairs(calc.model.U)
+        println("($i, $j, $k, $l) => $U_ijkl")
         # on-site term only
-        if i == j == k == l == 1
-            H += InfiniteMPOHamiltonian(
-                spaces, (1,) => U_ijkl * ops.n_pair
-            )
-            H += InfiniteMPOHamiltonian(
-                spaces, (3,) => U_ijkl * ops.n_pair
-            )
+        if (i,j,k,l) == (1,1,1,1)
+            H += InfiniteMPOHamiltonian(spaces, (1,) => U_ijkl * ops.n_pair)
+            H += InfiniteMPOHamiltonian(spaces, (3,) => U_ijkl * ops.n_pair)
+        elseif (i,j,k,l) == (1,2,2,1)
+            H += InfiniteMPOHamiltonian(spaces, (1,3) => U_ijkl * ops.n ⊗ ops.n)
+            H += InfiniteMPOHamiltonian(spaces, (3,5) => U_ijkl * ops.n ⊗ ops.n)
         end
     end
 
@@ -312,12 +298,9 @@ function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
     H += InfiniteMPOHamiltonian(spaces, (4,) => calc.model.w * nb)
 
     # Holstein coupling
-    H += InfiniteMPOHamiltonian(
-        spaces, (1,2) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,4) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
-    )
+    H += InfiniteMPOHamiltonian(spaces, (1,2) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus))
+    H += InfiniteMPOHamiltonian(spaces, (3,4) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus))
+    
     return H
 end
 
