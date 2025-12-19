@@ -32,7 +32,7 @@ A typical HubbardTN simulation follows a clear sequence of steps:
    These are specified in a [`SymmetryConfig`](@ref) object.
 
 2. **Specify the model parameters.**  
-   Insert your model’s coupling constants and hopping terms into a [`ModelParams`](@ref) object.  
+   Insert your model’s coupling constants and hopping terms into a [`HubbardParams`](@ref) object.  
    This defines the Hamiltonian that will be constructed.
 
 3. **Compute physical quantities.**  

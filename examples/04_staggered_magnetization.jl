@@ -22,7 +22,7 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
                                 max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=2.5)
     Ms = 0.0
     ψ_init = nothing
-    Ms_list = Float64[]
+    Ms_list = Float64[Ms]
     E_list = Float64[]
 
     println("Starting self-consistent calculation of staggered magnetization")

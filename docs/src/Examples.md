@@ -48,7 +48,7 @@ ex = compute_excitations(gs, momenta, charges)
   - The **particle** and **spin** symmetries (`Trivial`, `U1Irrep`, or `SU2Irrep`)
   - The **number of sites in the unit cell** (`cell_width`)
   - The **filling fraction**, defined by `N_electrons / N_sites` via the keyword `filling=(N_electrons, N_sites)`
-- The `ModelParams` constructor shown above is the simplest form, suitable for single-band Hubbard models.
+- The `HubbardParams` constructor shown above is the simplest form, suitable for single-band Hubbard models.
 
 ---
 
@@ -114,5 +114,5 @@ ex = compute_excitations(gs, momenta, charges)
 ---
 
 📘 **Tip:**  
-For advanced use cases (custom operators, constrained symmetry sectors, or DMRG sweep control), see the API reference for  
-[`compute_groundstate`](@ref), [`compute_excitations`](@ref), and [`ModelParams`](@ref).
+For advanced use cases (custom operators, constrained symmetry sectors, or DMRG sweep control), see the API reference for 
+[`HubbardParams`](@ref), [`CalcConfig`](@ref), and [`compute_groundstate`](@ref).
