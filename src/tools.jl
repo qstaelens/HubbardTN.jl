@@ -48,9 +48,8 @@ end
 """
     density_b(ψ::InfiniteMPS, symm::SymmetryConfig)
 
-Compute the number of phonons per site in the unit cell.
+Compute the number of bosons per site in the unit cell.
 """
-
 function density_b(ψ::InfiniteMPS, symm::SymmetryConfig, max_b::Int64)
     n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
 

@@ -3,7 +3,7 @@
 ##########
 
 """
-    hubbard_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; (P,Q)::Tuple{Int64, Int64}=(1,1))
+    hubbard_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64, Int64}=(1,1))
 
 Return the local hilbert space for a Hubbard-type model with the given particle and spin symmetries.
 The possible symmetries are `Trivial`, `U1Irrep`, and `SU2Irrep`, for both particle number and spin.
@@ -45,24 +45,6 @@ function hubbard_space(::Type{SU2Irrep}, ::Type{U1Irrep}; kwargs...)
 end
 function hubbard_space(::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs...)
     return Vect[FermionParity ⊠ SU2Irrep ⊠ SU2Irrep]((1, 1 // 2, 1 // 2) => 1)
-end
-
-"""
-    holstein_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int)
-
-Local Hilbert space for a Holstein phonon truncated at `cutoff` bosons.
-
-Implemented ONLY for:
-    particle_symmetry = Trivial
-    spin_symmetry     = U1Irrep
-"""
-function holstein_space(::Type{Trivial}, ::Type{U1Irrep}, max_b::Int64)
-    return Vect[FermionParity ⊠ U1Irrep]((0, 0) => max_b + 1)
-end
-
-# All other symmetry combinations → explicit error
-function holstein_space(ps::Type{<:Sector}, ss::Type{<:Sector}, max_b::Int64)
-    error("Holstein boson space not implemented for symmetry combination: particle=$ps, spin=$ss. Only (Trivial, U1Irrep) is supported.")
 end
 
 
@@ -116,7 +98,7 @@ function c_plusmin_up(T, ::Type{Trivial}, ::Type{U1Irrep}; kwargs...)
     return t
 end
 function c_plusmin_up(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
     t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
@@ -139,7 +121,7 @@ function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,
     return t
 end
 function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_up(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
     return error("Not implemented")
@@ -148,7 +130,7 @@ function c_plusmin_up(T, ::Type{SU2Irrep}, ::Type{U1Irrep}; kwargs...)
     return error("Not implemented")
 end
 function c_plusmin_up(T, ::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs...)
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 
 """
@@ -176,7 +158,7 @@ function c_plusmin_down(T, ::Type{Trivial}, ::Type{U1Irrep}; kwargs...)
     return t
 end
 function c_plusmin_down(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
     t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
@@ -199,7 +181,7 @@ function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int6
     return t
 end
 function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_down(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
     return error("Not implemented")
@@ -208,7 +190,7 @@ function c_plusmin_down(T, ::Type{SU2Irrep}, ::Type{U1Irrep}; kwargs...)
     return error("Not implemented")
 end
 function c_plusmin_down(T, ::Type{SU2Irrep}, ::Type{SU2Irrep}; kwargs...)
-    return error("Not implemented")
+    throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 
 """
@@ -464,41 +446,4 @@ Return the one-body spin operator Sᶻ = 1/2 (n_↑ - n_↓).
 Sz(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = Sz(ComplexF64, P, S; kwargs...)
 function Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
     return 0.5 * (number_up(T, particle_symmetry, spin_symmetry; kwargs...) - number_down(T, particle_symmetry, spin_symmetry; kwargs...))
-end
-
-"""
-    boson_number(T, particle_symmetry, spin_symmetry; cutoff)
-
-Phonon number operator n̂ with n̂|n⟩=n|n⟩.
-"""
-number_b(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = number_b(ComplexF64, P, S, max_b)
-function number_b(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b)
-    I = sectortype(t)
-    for n in 1:max_b
-        block(t, I(0, 0))[n+1, n+1] = n
-    end
-    return t
-end
-
-"""Boson annihilation operator b with b|n⟩=√n|n-1⟩."""
-b_min(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = b_min(ComplexF64, P, S, max_b)
-function b_min(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b::Int64)
-    I = sectortype(t)
-    for n in 1:max_b
-        block(t, I(0, 0))[n, n+1] = sqrt(n)
-    end
-    return t
-end
-
-"""Boson creation operator b† with b†|n⟩=√(n+1)|n+1⟩."""
-b_plus(P::Type{<:Sector}, S::Type{<:Sector}, max_b) = b_plus(ComplexF64, P, S, max_b)
-function b_plus(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}, max_b::Int64)
-    t = boson_single_site_operator(T, particle_symmetry, spin_symmetry, max_b)
-    I = sectortype(t)
-    for n in 1:max_b
-        block(t, I(0, 0))[n+1, n] = sqrt(n)
-    end
-    return t
 end

@@ -45,9 +45,8 @@ function maximal_virtualspace(::Type{SU2Irrep}, ::Type{SU2Irrep}, total_width::I
     return build_virtualspace(FermionParity ⊠ SU2Irrep ⊠ SU2Irrep, (0:1, 0:1//2:3, 0:1//2:3), maxdim)
 end
 
-function initialize_mps(H::InfiniteMPOHamiltonian,symm::SymmetryConfig; max_dimension::Int=50)
+function initialize_mps(H::InfiniteMPOHamiltonian, symm::SymmetryConfig; max_dimension::Int=50)
     Ps = physicalspace.(parent(H))
-    total_width = length(Ps)
 
     # Compute left and right fusion spaces
     V_right = accumulate(fuse, Ps)
@@ -61,7 +60,7 @@ function initialize_mps(H::InfiniteMPOHamiltonian,symm::SymmetryConfig; max_dime
 
     # Construct maximal symmetry-allowed virtual space
     P = symm.filling === nothing ? 1 : symm.filling[1]
-    Vmax = maximal_virtualspace(symm.particle_symmetry, symm.spin_symmetry, total_width, max_dimension, P)
+    Vmax = maximal_virtualspace(symm.particle_symmetry, symm.spin_symmetry, length(Ps), max_dimension, P)
 
     V_trunc = TensorKit.infimum.(V, fill(Vmax, length(V)))
 
@@ -117,7 +116,7 @@ function compute_groundstate(
     H = hamiltonian(calc)
 
     symm = calc.symmetries
-    total_width = calc.model.bands * symm.cell_width
+    total_width = calc.hubbard.bands * symm.cell_width
     ψ₀ = isnothing(init_state) ? initialize_mps(H, symm; max_dimension=max_init_dim) : init_state
 
     schmidtcut = 10.0^(-svalue)
@@ -151,12 +150,10 @@ end
 # Find chemical potential #
 ###########################
 
-function change_chemical_potential(model::ModelParams, μ::Float64)
+function change_chemical_potential(model::HubbardParams, μ::Float64)
     bands = model.bands
     t = model.t
     U = model.U
-    V = model.V
-    J_M0 = model.J_M0
 
     @assert length(μ) == bands "Length of μ vector must match number of bands."
 
@@ -174,7 +171,7 @@ function change_chemical_potential(model::ModelParams, μ::Float64)
         t_new[(i,i)] += μ - μ_old
     end
     
-    return ModelParams(bands, t_new, U, V, J_M0)
+    return HubbardParams(bands, t_new, U)
 end
 
 function calculate_filling(calc::CalcConfig, 
@@ -182,7 +179,7 @@ function calculate_filling(calc::CalcConfig,
                             svalue::Float64=2.0, 
                             init_state::Union{Nothing, InfiniteMPS}=nothing
                         )
-    simul = CalcConfig(calc.symmetries, change_chemical_potential(calc.model, μ))
+    simul = CalcConfig(calc.symmetries, change_chemical_potential(calc.hubbard, μ))
     gs = compute_groundstate(simul; svalue=svalue, init_state=init_state)
     ψ = gs["groundstate"]
     filling = sum(density_e(ψ, calc.symmetries)) / length(ψ)

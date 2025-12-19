@@ -32,7 +32,7 @@ function compute_excitations(
     envs = groundstate_dict["environments"]
 
     trivial_sector = first(sectors(oneunit(physicalspace(H, 1))))
-    @assert length(charges) == length(trivial_sector) "Number of charges must match number of symmetries."
+    @assert length(charges) == length(trivial_sector) "Number of charges must match number of symmetries ($(length(trivial_sector)))."
     sector = foldl(⊠, [typeof(f)(charges[i]) for (i, f) in enumerate((trivial_sector))])
 
     Es, qps = excitations(H, QuasiparticleAnsatz(solver, MPSKit.Defaults.alg_environments(;dynamic_tols=false)), 
@@ -77,7 +77,7 @@ function compute_domainwall(
     envs = groundstate_dict["environments"]
 
     trivial_sector = first(sectors(oneunit(physicalspace(H, 1))))
-    @assert length(charges) == length(trivial_sector) "Number of charges must match number of symmetries."
+    @assert length(charges) == length(trivial_sector) "Number of charges must match number of symmetries ($(length(trivial_sector)))."
     sector = foldl(⊠, [typeof(f)(charges[i]) for (i, f) in enumerate((trivial_sector))])
 
     ψ_s = circshift(ψ, shift)

@@ -18,13 +18,13 @@ function pattern_key(indices::Vararg{Int})
     return Symbol(String(keychars))
 end
 # Maps indices to actual lattice sites based on pattern key
-function compute_sites(indices::NTuple{N,Int}, lattice, key::Symbol) where {N}
+function compute_sites(indices::NTuple{N,Int}, key::Symbol) where {N}
     letters = collect(string(key))
     unique_letters = unique(letters)
 
     selected_indices = [indices[findfirst(==(letter), letters)] for letter in unique_letters]
 
-    return tuple((lattice[idx] for idx in selected_indices)...)
+    return tuple((idx for idx in selected_indices)...)
 end
 
 
@@ -95,7 +95,7 @@ end
 
 # Caching constructed two-body operators
 const two_body_cache = Dict{Symbol,Any}()
-function two_body_int_cached(ops, (i,j,k,l)::NTuple{4,Int}, lattice)
+function two_body_int_cached(ops, (i,j,k,l)::NTuple{4,Int})
     key = pattern_key(i,j,k,l)
 
     if haskey(two_body_cache, key)
@@ -104,7 +104,7 @@ function two_body_int_cached(ops, (i,j,k,l)::NTuple{4,Int}, lattice)
         operator = two_body_int(ops, Val(key))
         two_body_cache[key] = operator
     end
-    sites = compute_sites((i,j,k,l), lattice, key)
+    sites = compute_sites((i,j,k,l), key)
 
     return operator, sites
 end
@@ -141,7 +141,7 @@ end
 
 # Caching constructed three-body operators
 const three_body_cache = Dict{Symbol,Any}()
-function three_body_int_cached(ops, (i,j,k,l,m,n)::NTuple{6,Int}, lattice)
+function three_body_int_cached(ops, (i,j,k,l,m,n)::NTuple{6,Int})
     key = pattern_key(i,j,k,l,m,n)
 
     if haskey(three_body_cache, key)
@@ -150,7 +150,7 @@ function three_body_int_cached(ops, (i,j,k,l,m,n)::NTuple{6,Int}, lattice)
         operator = three_body_int(ops, Val(key))
         three_body_cache[key] = operator
     end
-    sites = compute_sites((i,j,k,l), lattice, key)
+    sites = compute_sites((i,j,k,l), key)
 
     return operator, sites
 end
@@ -161,163 +161,169 @@ end
 ############################
 
 # Build the symmetry-dependent operators
-function build_ops(symm::SymmetryConfig)
+function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
     ps = symm.particle_symmetry
     ss = symm.spin_symmetry
     fill = symm.filling
+
+    electron_space = hubbard_space(ps, ss; filling=fill)
+
     ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
         n        = number_e(ps, ss; filling=fill)
     )
-    if ps !== SU2Irrep  &&  ss !== SU2Irrep
+    if ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
     end
-    return ops
+
+    phonon_space = []
+    if max_b > 0
+        ops = merge(ops, (bmin = b_min(ps, ss, max_b; filling=fill),
+                          bplus = b_plus(ps, ss, max_b; filling=fill),
+                          nb = number_b(ps, ss, max_b; filling=fill)))
+
+        phonon_space = [boson_space(ps, ss, max_b; filling=fill)]
+    end
+
+    electron_spaces = [electron_space for _ in 1:bands]
+    spaces = append!(electron_spaces, phonon_space)
+
+    return ops, repeat(spaces, symm.cell_width)
 end
 
 """
     hamiltonian(calc::CalcConfig)
 
-Constructs the many-body Hamiltonian for a lattice system with given hopping 
-and interaction parameters, taking into account particle and spin symmetries.
-
-# Arguments
-- `calc::CalcConfig` : A configuration object containing:
-    - `calc.symmetries` : SymmetryConfig, which includes:
-        - `particle_symmetry`  - type of particle symmetry
-        - `spin_symmetry`      - type of spin symmetry
-        - `cell_width`         - number of unit cells in the system
-        - `filling`            - particle filling
-    - `calc.model` : Model parameters, which include:
-        - `bands` - number of orbitals per unit cell
-        - `t`      - hopping matrix or list of hopping terms
-        - `U`      - two-body interaction tensor
-        - `V`      - three-body interaction tensor
-        - `(J,M0)` - inter-chain Hunds and initial staggerd magnetization
-
-# Returns
-- `H` : The Hamiltonian as an Matrix Product Operator.
+Constructs the many-body Hamiltonian for a system defined by configuration `calc`.
 
 # Notes
 - Lattice sites are represented using an `InfiniteChain` of length `cell_width * bands`.
 - The resulting MPO can be used directly for DMRG, VUMPS, or other tensor network calculations.
 """
-function hamiltonian(calc::CalcConfig{ModelParams{T}}) where {T}
+function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
     empty!(two_body_cache)
     empty!(three_body_cache)
 
+    bands = calc.hubbard.bands
+    t = calc.hubbard.t
+    U = calc.hubbard.U
+
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
+    boson_site = Int(max_b>0)
+
     symm = calc.symmetries
-    ops = build_ops(symm)
+    ops, spaces = build_ops(symm, bands, max_b)
     cell_width = symm.cell_width
 
-    bands = calc.model.bands
-    t = calc.model.t
-    U = calc.model.U
-    V = calc.model.V
-    lattice = InfiniteChain(cell_width * bands)
+    period = bands + boson_site
 
-    H = @mpoham 0*ops.n{lattice[1]}       # Initialize MPO
+    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(1,) => 0*ops.n]  # Initialize MPO
 
     # --- Hopping ---
     for cell in 0:(cell_width-1)
-        H += @mpoham sum(-t_ij * ops.c⁺c{lattice[i+cell*bands], lattice[j+cell*bands]} for ((i,j), t_ij) in t if i != j; init=0*ops.n{lattice[1]})
-        H += @mpoham sum(-μ_i * ops.n{lattice[i+cell*bands]} for ((i,j), μ_i) in pairs(t) if i == j; init=0*ops.n{lattice[1]})
+        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        h = append!(h, [site.((i,j)) => -t_ij*ops.c⁺c for ((i,j), t_ij) in t if i != j])
+        h = append!(h, [(site(i),) => -μ_i*ops.n for ((i,j), μ_i) in t if i == j])
     end
 
     # --- 2-body Interaction ---
     for cell in 0:(cell_width-1)
-        H += @mpoham sum(begin
-            operator, indices = two_body_int_cached(ops, (i,j,k,l) .+ cell*bands, lattice)
-            0.5 * U_ijkl * operator{indices...}
-        end for ((i,j,k,l), U_ijkl) in collect(pairs(U)); init=0*ops.n{lattice[1]})
+        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        h = append!(h, [
+            begin 
+                operator, indices = two_body_int_cached(ops, site.((i,j,k,l)))
+                indices => 0.5 * U_ijkl * operator
+            end for ((i,j,k,l), U_ijkl) in U
+        ])
     end
 
-    # --- 3-body Interaction ---
+    # --- Extra terms ---
+    for term in calc.terms
+        h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_site))
+    end
+
+    return InfiniteMPOHamiltonian(spaces, h...)
+end
+
+# Three-body interaction term
+function hamiltonian_term(
+                    term::ThreeBodyTerm, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_site::Int64
+                )
+    V = term.V
+    period = bands + boson_site
+
+    h = []
+
     for cell in 0:(cell_width-1)
-        H += @mpoham sum(begin
-            operator, indices = three_body_int_cached(ops, (i,j,k,l,m,n) .+ cell*bands, lattice)
-            1/6 * V_ijklmn * operator{indices...}
-        end for ((i,j,k,l,m,n), V_ijklmn) in collect(pairs(V)); init=0*ops.n{lattice[1]})
+        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        h = append!(h, [
+            begin
+                operator, indices = three_body_int_cached(ops, site.((i,j,k,l,m,n)))
+                indices => 1/6 * V_ijklmn * operator
+            end for ((i,j,k,l,m,n), V_ijklmn) in V
+        ])
     end
 
-    # --- Staggered magnetization field term ---
-    J_inter, Ms = calc.model.J_M0
-    if Ms != 0.0 && J_inter != 0.0
-        H += @mpoham sum(2 * J_inter * Ms * (-1)^i * ops.Sz{lattice[i]} for i in 1:(cell_width*bands); init=0*ops.n{lattice[1]})
-    end
-
-    return H
+    return h
 end
+# Magnetic field term
+function hamiltonian_term(
+                    term::MagneticField, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_site::Int64
+                )
+    B = term.B
+    period = bands + boson_site
 
-function hamiltonian(calc::CalcConfig{HolsteinParams{T}}) where {T}
-    empty!(two_body_cache)
-    empty!(three_body_cache)
-
-    symm  = calc.symmetries
-    ops = build_ops(symm)
-
-    Ps  = hubbard_space(Trivial, U1Irrep; filling = symm.filling)
-    Psb = holstein_space(Trivial, U1Irrep, calc.model.max_b)
-
-    # fixed geometry: site 1 = Hubbard, 2 = phonon, 3 = Hubbard, 4 = phonon
-    spaces = [Ps, Psb, Ps, Psb]
-
-    bmin   = b_min(Trivial, U1Irrep, calc.model.max_b)
-    bplus  = b_plus(Trivial, U1Irrep, calc.model.max_b)
-    nb  = number_b(Trivial, U1Irrep, calc.model.max_b)
-
-    # chemical potential
-    μ = calc.model.t[(1,1)]
-
-    H = InfiniteMPOHamiltonian(
-        spaces, (1,) => -μ * ops.n
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,) => -μ * ops.n
-    )
-
-    # hopping: model.t[(1,2)] ↦ sites (1,3)
-    t = calc.model.t[(1,2)]
-
-    H += InfiniteMPOHamiltonian(
-        spaces, (1,3) => -t * ops.c⁺c
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,1) => -t * ops.c⁺c
-    )
-
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,5) => -t * ops.c⁺c
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (5,3) => -t * ops.c⁺c
-    )
-
-    # Hubbard U (single-band, on-site)
-    for ((i,j,k,l), U_ijkl) in pairs(calc.model.U)
-        # on-site term only
-        if i == j == k == l == 1
-            H += InfiniteMPOHamiltonian(
-                spaces, (1,) => U_ijkl * ops.n_pair
-            )
-            H += InfiniteMPOHamiltonian(
-                spaces, (3,) => U_ijkl * ops.n_pair
-            )
-        end
-    end
-
-    # phonon energy
-    H += InfiniteMPOHamiltonian(spaces, (2,) => calc.model.w * nb)
-    H += InfiniteMPOHamiltonian(spaces, (4,) => calc.model.w * nb)
-
-    # Holstein coupling
-    H += InfiniteMPOHamiltonian(
-        spaces, (1,2) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
-    )
-    H += InfiniteMPOHamiltonian(
-        spaces, (3,4) => calc.model.g * (ops.n - id(Ps)) ⊗ (bmin + bplus)
-    )
-    return H
+    return [(i,) => -B*ops.Sz for i in 1:period*cell_width if i%period != 0]
 end
+# Staggered magnetic field term
+function hamiltonian_term(
+                    term::StaggeredField, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_site::Int64
+                )
+    J = term.J
+    Ms = term.Ms
+    period = bands + boson_site
+    phase = (-1) .^ (div.(0:(period*cell_width-1), period))
 
+    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width if i%period != 0]
+end
+# Holstein coupling term
+function hamiltonian_term(
+                    term::HolsteinTerm, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_site::Int64
+                )
+
+    w = term.w
+    g = term.g
+    mean_ne = term.mean_ne
+
+    period = bands + boson_site
+
+    electron_sites = [i for i in 1:cell_width*period if i%period != 0]
+    phonon_sites = [i for i in 1:cell_width*period if i%period == 0]
+
+    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w*ops.nb for i in phonon_sites]
+
+    return append!(h, [
+                        (i,j) => g[mod1(i, period)] * (ops.n - mean_ne*id(domain(ops.n)))⊗(ops.bmin + ops.bplus) 
+                        for i in electron_sites 
+                        for j in phonon_sites
+                        if j-period < i < j
+                    ])
+end

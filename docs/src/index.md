@@ -11,7 +11,7 @@ You can install `HubbardTN` directly from its GitHub repository:
 
 ```julia
 julia> using Pkg
-julia> Pkg.add(url="https://github.com/DaanVrancken/HubbardTN.jl")
+julia> Pkg.add("HubbardTN")
 ```
 After installation, load the package with:
 ```
@@ -40,3 +40,4 @@ A typical HubbardTN simulation follows a clear sequence of steps:
    - Compute the **ground state** using [`compute_groundstate`](@ref).
    - Obtain **excitations** with [`compute_excitations`](@ref).
    - Investigate **domain walls** via [`compute_domainwall`](@ref).
+   - ...

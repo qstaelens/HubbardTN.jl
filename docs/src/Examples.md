@@ -26,7 +26,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 
-model = ModelParams(t, U)
+model = HubbardParams(t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
@@ -85,7 +85,7 @@ U = Dict(
     (2,1,2,1) => 1.0
 )
 
-model = ModelParams(bands, t, U)
+model = HubbardParams(bands, t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state

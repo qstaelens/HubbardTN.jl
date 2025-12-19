@@ -26,7 +26,7 @@ U = Dict(
     (2,1,2,1) => 1.0
 )
 
-model = ModelParams(bands, t, U)
+model = HubbardParams(bands, t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state

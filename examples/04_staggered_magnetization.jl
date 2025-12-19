@@ -22,7 +22,7 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
                                 max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=2.5)
     Ms = 0.0
     ψ_init = nothing
-    Ms_list = Float64[Ms]
+    Ms_list = Float64[]
     E_list = Float64[]
 
     println("Starting self-consistent calculation of staggered magnetization")
@@ -31,8 +31,8 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         println("\n--- Iteration $i: Ms = $Ms ---")
         
         # Step 2: Set up model parameters with current Ms
-        model = ModelParams(t, U; J_M0=(J_inter, Ms))
-        calc = CalcConfig(symm, model)
+        model = HubbardParams(t, U)
+        calc = CalcConfig(symm, model, StaggeredField(J_inter, Ms))
 
         # Step 3: Compute the ground state
         gs = compute_groundstate(calc; svalue = svalue, init_state=ψ_init)

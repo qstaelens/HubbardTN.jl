@@ -15,7 +15,7 @@ tol = 1e-1
     t = [0.0, 1.0] 
     U = [5.0]
 
-    model = ModelParams(t, U)
+    model = HubbardParams(t, U)
     calc = CalcConfig(symm, model)
 
     mu = find_chemical_potential(calc, 0.75; verbosity=0)

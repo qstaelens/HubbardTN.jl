@@ -15,8 +15,8 @@ w = 1.0
 g = 0.0
 max_b = 4
 
-model = HolsteinParams(t, U, w, g, max_b)
-calc = CalcConfig(symm, model)
+model = HubbardParams(t, U)
+calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
 # Step 3: Compute the ground state
 gs = compute_groundstate(calc; svalue = 3.0)
