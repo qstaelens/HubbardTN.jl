@@ -179,10 +179,10 @@ function calculate_filling(calc::CalcConfig,
                             svalue::Float64=2.0, 
                             init_state::Union{Nothing, InfiniteMPS}=nothing
                         )
-    simul = CalcConfig(calc.symmetries, change_chemical_potential(calc.hubbard, μ))
+    simul = CalcConfig(calc.symmetries, change_chemical_potential(calc.hubbard, μ), calc.terms)
     gs = compute_groundstate(simul; svalue=svalue, init_state=init_state)
     ψ = gs["groundstate"]
-    filling = sum(density_e(ψ, calc.symmetries)) / length(ψ)
+    filling = sum(density_e(ψ, calc)) / length(ψ)
 
     return filling, ψ
 end
