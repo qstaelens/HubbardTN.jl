@@ -13,7 +13,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 
-model = ModelParams(t, U)
+model = HubbardParams(t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
@@ -32,7 +32,7 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e(ψ, symm)
+Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
 
 # Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × SU2Irrep(0) sector

@@ -24,13 +24,6 @@ unit cell width, and optional filling information.
 - `cell_width` must be positive.
 - If `particle_symmetry` is `U1Irrep` and `filling` is specified, the constructor ensures that `cell_width` is a multiple of
   `filling[2] * (mod(filling[1], 2) + 1)` to accommodate the specified filling.
-
-# Examples
-    # Trivial particle and spin symmetry, default cell width
-    cfg1 = SymmetryConfig(Trivial, Trivial)
-
-    # U(1) particle symmetry with SU(2) spin symmetry, cell width 2, filling 1/2
-    cfg2 = SymmetryConfig(U1Irrep, SU2Irrep, cell_width=2, filling=(1,2))
 """
 struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
@@ -51,7 +44,7 @@ struct SymmetryConfig
             numerator, denominator = filling
             @assert numerator > 0 && denominator > 0 "Filling components must be positive integers"
             necessary_width = denominator * (mod(numerator, 2) + 1)
-            @assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width \
+            @assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width 
                                                        to accommodate the specified filling ($numerator / $denominator)"
         elseif filling !== nothing
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
@@ -62,9 +55,9 @@ struct SymmetryConfig
 end
 
 
-####################
-# Model parameters #
-####################
+#################
+# Hubbard model #
+#################
 
 # Convert hopping matrix to dictionary representation
 function hopping_matrix2dict(t::Union{Vector{T}, Matrix{T}}) where {T<:AbstractFloat}
@@ -102,111 +95,52 @@ function addU!(U::Dict{NTuple{4,Int},T}, key::NTuple{4,Int}, val::T) where {T}
         U[(l,k,j,i)] = conj(val)          # Hermitian conjugate term
     end
 end
-# Add 3-body interaction term and its Hermitian conjugate
-function addV!(V::Dict{NTuple{6,Int},T}, key::NTuple{6,Int}, val::T) where {T}
-    if val != 0
-        V[key] = val
-        i,j,k,l,n,m = key
-        V[(m,n,l,k,j,i)] = conj(val)          # Hermitian conjugate term
-    end
-end
-# Make
-function three_body_term(i::Int64, j::Int64, value::T, V::Dict{NTuple{6,Int},T}=Dict{NTuple{6,Int},T}()) where {T<:AbstractFloat}
-    addV!(V, (i,i,j,j,i,i), value)
-    addV!(V, (i,j,i,i,j,i), value)
-    addV!(V, (j,i,i,i,i,j), value)
-    addV!(V, (i,j,j,j,j,i), value)
-    addV!(V, (j,i,j,j,i,j), value)
-    addV!(V, (j,j,i,i,j,j), value)
-    return V
-end
 
 """
-    ModelParams{T<:AbstractFloat}
+    HubbardParams{T<:AbstractFloat}
 
-Represents the Hamiltonian parameters for a lattice or multi-orbital system,
-including hopping terms, two-body, and three-body interactions.
+Represents the standard Hubbard Hamiltonian parameters for a lattice or
+multi-orbital system.
 
 # Fields
 - `bands::Int64`  
-    Number of orbitals or bands per unit cell. Must be positive.
+    Number of electronic orbitals or bands per unit cell. Must be positive.
 - `t::Dict{NTuple{2, Int64}, T}`  
-    Hopping amplitudes between sites. Convention: `t[(i,i)] = μ_i` is the on-site potential,
+    Hopping amplitudes. Convention: `t[(i,i)] = μ_i` is the on-site potential,
     `t[(i,j)]` for `i ≠ j` is the hopping amplitude from site i to j.
 - `U::Dict{NTuple{4, Int64}, T}`  
-    Two-body interaction tensor. Entries `U[(i,j,k,l)]` correspond to the operator
-    c⁺_i c⁺_j c_k c_l. Zero entries can be omitted from the dictionary.
-- `V::Dict{NTuple{6, Int64}, T}`  
-    Three-body interaction tensor. Entries `V[(i,j,k,l,m,n)]` correspond to the operator
-    c⁺_i c⁺_j c⁺_k c_l c_m c_n. Zero entries can be omitted from the dictionary.
-- `J_M0::NTuple{2, T}`  
-    Tuple containing inter-chain Hund's coupling `J` and initial staggered magnetization `M0`. Only implemented for single-band models.
+    Two-body electronic interaction tensor. Entries `U[(i,j,k,l)]` correspond
+    to the operator c⁺_i c⁺_j c_k c_l. Zero entries can be omitted.
 
 # Constructors
-
-1. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T})`  
-   Standard constructor with explicit number of bands, hopping dictionary, and interaction dictionary. `V` is empty by default.
-2. `ModelParams(bands::Int64, t::Dict{NTuple{2, Int64}, T}, U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64},T})`  
-   Constructor including three-body interactions.
-3. `ModelParams(t::Vector{T}, U::Dict{NTuple{4,Int},T})`  
-   Single-band constructor from hopping vector and two-body interaction dictionary.
-4. `ModelParams(t::Vector{T}, U::Vector{T}; J_M0::NTuple{2, T}=(0.0,0.0)))`  
-   Single-band constructor from hopping vector, a vector of on-site interactions, and optionally staggered magnetic field parameters. 
-   Converts the vector automatically into the interaction dictionary.
-5. `ModelParams(t::Matrix{T}, U::Matrix{T})`  
-   Multi-band constructor from hopping matrix and two-body interaction matrix. Checks Hermiticity and dimensions, converts into internal dictionary format.
-6. `ModelParams(t::Vector{T}, U::Vector{T}, V::Vector{T})`  
-   Single-band constructor including three-body interactions. Converts vectors into dictionaries internally.
-7. `ModelParams(t::Matrix{T}, U::Matrix{T}, V::Matrix{T})`  
-   Multi-band constructor including three-body interactions. Converts matrices into dictionaries and checks Hermiticity.
-
-# Notes
-- Hopping and interaction arrays or vectors are automatically converted into the internal `Dict` representation.
-- Hermiticity of on-site interaction matrices is asserted when applicable.
-- The interaction dictionaries are structured for direct use in many-body Hamiltonian construction.
-- Zero entries in `U` or `V` can be omitted from the dictionaries.
+- `HubbardParams(bands, t::Dict, U::Dict)` — standard constructor specifying bands, hopping, and interactions.
+- `HubbardParams(t::Vector, U::Vector)` — single-band convenience constructor from vectors.
+- `HubbardParams(t::Matrix, U::Matrix)` — multi-band constructor from matrices; automatically checks dimensions and Hermiticity.
 """
-struct ModelParams{T<:AbstractFloat}
+struct HubbardParams{T<:AbstractFloat}
     bands::Int64
     t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
     U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
-    V::Dict{NTuple{6, Int64}, T}          # 3-body interaction V_ijklmn c⁺_i c⁺_j c⁺_k c_l c_m c_n
-    J_M0::NTuple{2, T}                    # Staggered magnetic interaction J with initial magnetization M0
 
-    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
+    function HubbardParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
         @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, Dict(), (0.0,0.0))
-    end
-    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
-                        U::Dict{NTuple{4,Int},T}, V::Dict{NTuple{6, Int64}, T}) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
-        new{T}(bands, t, U, V, (0.0,0.0))
-    end
-    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, 
-                        U::Dict{NTuple{4,Int},T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
-        @assert bands == 1 "Staggered magnetization field term is only implemented for single-band models."
-        new{T}(bands, t, U, Dict(), J_M0)
-    end
-    function ModelParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, 
-             V::Dict{NTuple{6, Int64}, T}, J_M0::NTuple{2, T}) where {T<:AbstractFloat}
-        @assert bands == 1 "Staggered magnetization field term is only implemented for single-band models."
-        new{T}(bands, t, U, V, J_M0)
+        new{T}(bands, t, U)
     end
 end
 # Constructors
-function ModelParams(t::Union{Vector{T}, Matrix{T}}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
+function HubbardParams(t::Union{Vector{T}, Matrix{T}}, U::Dict{NTuple{4,Int},T}) where {T<:AbstractFloat}
     bands = isa(t, Matrix) ? size(t,1) : 1
-    return ModelParams(bands, hopping_matrix2dict(t), U)
+    return HubbardParams(bands, hopping_matrix2dict(t), U)
 end
-function ModelParams(t::Vector{T}, U::Vector{T}; J_M0::NTuple{2, T}=(0.0,0.0)) where {T<:AbstractFloat}
+function HubbardParams(t::Vector{T}, U::Vector{T}) where {T<:AbstractFloat}
     interaction = Dict{NTuple{4,Int},T}()
     for (i, val) in enumerate(U)
         addU!(interaction, (1,i,i,1), val)
-        addU!(interaction, (i,1,1,i), val)  # double counting: factor 1/2 added later
+        addU!(interaction, (i,1,1,i), val)
     end
-    return ModelParams(1, hopping_matrix2dict(t), interaction, J_M0)
+    return HubbardParams(1, hopping_matrix2dict(t), interaction)
 end
-function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
+function HubbardParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
     bands = size(t, 1)
 
     # --- basic checks ---
@@ -222,60 +156,144 @@ function ModelParams(t::Matrix{T}, U::Matrix{T}) where {T<:AbstractFloat}
         end
     end
 
-    return ModelParams(bands, hopping_matrix2dict(t), interaction)
+    return HubbardParams(bands, hopping_matrix2dict(t), interaction)
 end
-function ModelParams(t::Vector{T}, U::Vector{T}, V::Vector{T}) where {T<:AbstractFloat}
-    model_base = ModelParams(t, U)
+
+
+###############
+# Extra terms #
+###############
+
+abstract type AbstractHamiltonianTerm end
+
+# Add 3-body interaction term and its Hermitian conjugate
+function addV!(V::Dict{NTuple{6,Int},T}, key::NTuple{6,Int}, val::T) where {T}
+    if val != 0
+        V[key] = val
+        i,j,k,l,n,m = key
+        V[(m,n,l,k,j,i)] = conj(val)          # Hermitian conjugate term
+    end
+end
+# Add standard 3-body interaction terms to dictionary
+function dominant_threebody_term(i::Int64, j::Int64, value::T, V::Dict{NTuple{6,Int},T}=Dict{NTuple{6,Int},T}()) where {T<:AbstractFloat}
+    addV!(V, (i,i,j,j,i,i), value)
+    addV!(V, (i,j,i,i,j,i), value)
+    addV!(V, (j,i,i,i,i,j), value)
+    addV!(V, (i,j,j,j,j,i), value)
+    addV!(V, (j,i,j,j,i,j), value)
+    addV!(V, (j,j,i,i,j,j), value)
+    return V
+end
+
+"""
+    ThreeBodyTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
+
+Represents three-body interactions in the Hamiltonian.
+
+# Fields
+- `bands::Int64`  
+    Number of bands (orbitals) in the system.
+- `V::Dict{NTuple{6,Int}, T}`  
+    Three-body interaction amplitudes `c⁺_i c⁺_j c⁺_k c_l c_m c_n`. Zero
+    entries can be omitted.
+
+# Constructors
+- `ThreeBodyTerm(V::Vector{T})` — single-band constructor from a vector.
+- `ThreeBodyTerm(V::Matrix{T})` — multi-band constructor from a matrix.
+"""
+struct ThreeBodyTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    bands::Int64
+    V::Dict{NTuple{6,Int}, T}
+end
+# Constructors
+function ThreeBodyTerm(V::Vector{T}) where {T<:AbstractFloat}
     threebody = Dict{NTuple{6,Int},T}()
     for (i, val) in enumerate(V)
-        threebody = three_body_term(1, i+1, val, threebody)
+        threebody = dominant_threebody_term(1, i+1, val, threebody)
     end
 
-    return ModelParams(model_base.bands, model_base.t, model_base.U, threebody)
+    return ThreeBodyTerm(1, threebody)
 end
-function ModelParams(t::Matrix{T}, U::Matrix{T}, V::Matrix{T}) where {T<:AbstractFloat}
-    model_base = ModelParams(t, U)
-    bands = model_base.bands
-    @assert size(V, 1) == bands "First dimension of V ($(size(V,1))) must be equal to number of bands ($bands)"
+function ThreeBodyTerm(V::Matrix{T}) where {T<:AbstractFloat}
+    bands = size(V, 1)
     @assert size(V, 2) % bands == 0 "Second dimension of V ($(size(V,2))) must be multiple of number of bands ($bands)"
     @assert ishermitian(V[1:bands, 1:bands]) "V on-site matrix is not Hermitian"
 
     threebody = Dict{NTuple{6,Int},T}()
     for i in 1:bands
         for j in 1:size(V,2)
-            threebody = three_body_term(i, j, V[i,j], threebody)
+            threebody = dominant_threebody_term(i, j, V[i,j], threebody)
         end
     end
 
-    return ModelParams(model_base.bands, model_base.t, model_base.U, threebody)
+    return ThreeBodyTerm(bands, threebody)
 end
 
-##########################
-# Hubbard Holstein model #
-##########################
+"""
+    MagneticField{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
-struct HolsteinParams{T<:AbstractFloat}
-    bands::Int64
-    t::Dict{NTuple{2, Int64}, T}          # t_ii=µ_i, t_ij hopping i→j
-    U::Dict{NTuple{4, Int64}, T}          # U_ijkl c⁺_i c⁺_j c_k c_l
-    w::T                                  # Phonon frequency
-    g::T                                  # Electron-phonon coupling strength
-    max_b::Int64                          # Max allowed phonons per site
+Represents a magnetic field term in the Hamiltonian `B * Sᶻ`.
 
-    function HolsteinParams(bands::Int64, t::Dict{NTuple{2,Int64}, T}, U::Dict{NTuple{4,Int},T}, w::T, g::T, max_b::Int64) where {T<:AbstractFloat}
-        @assert bands > 0 "Number of bands must be a positive integer"
-        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
-        new{T}(bands, t, U, w, g, max_b)
-    end
-end
+# Fields
+- `B::T`  
+    Magnetic field strength.
+
 # Constructors
-function HolsteinParams(t::Vector{T}, U::Vector{T}, w::T=0.0, g::T=0.0, max_b::Int64=1) where {T<:AbstractFloat}
-    interaction = Dict{NTuple{4,Int},T}()
-    for (i, val) in enumerate(U)
-        addU!(interaction, (1,i,i,1), val)
-        addU!(interaction, (i,1,1,i), val)
+- `MagneticField(B)` — creates the term with specified magnetic field strength.
+"""
+struct MagneticField{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    B::T            # Magnetic field strength
+end
+
+"""
+    StaggeredField{T<:AbstractFloat} <: AbstractHamiltonianTerm
+
+Represents a staggered magnetic field term in the Hamiltonian. 
+For multi-band models, the staggering is applied between equivalent orbitals.
+
+# Fields
+- `J::T`  
+    Inter-chain Hund's coupling.
+- `Ms::T`  
+    Initial staggered magnetization.
+
+# Constructors
+- `StaggeredField(J, Ms)` — creates the term with specified coupling and initial magnetization.
+"""
+struct StaggeredField{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    J::T            # Inter-chain Hund's coupling
+    Ms::T           # Initial staggered magnetization
+end
+
+"""
+    HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
+
+Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and`gₐ(nᵢₐ-<n>)(b⁺ᵢ + bᵢ)` in the Hamiltonian.
+
+# Fields
+- `w::T`  
+    Local phonon frequency.
+- `g::Vector{T}`  
+    Electron–phonon coupling strength per Hubbard band.
+- `max_b::Int64`  
+    Maximum number of phonons allowed per site.
+- `mean_ne::T`  
+    Mean number of electrons in Hubbard model.
+
+# Constructors
+- `HolsteinTerm(w, g, max_b, mean_ne)` — creates the term with specified phonon frequency,
+  coupling, and phonon truncation.
+"""
+struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    w::T                        # Phonon frequency in term `w b⁺ᵢ bᵢ`
+    g::Vector{T}                # Electron-phonon coupling strength per Hubbard band
+    max_b::Int64                # Max allowed phonons per site
+    mean_ne::T                  # Mean number of electrons in Hubbard model
+
+    function HolsteinTerm(w::T, g::Vector{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
+        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
+        new{T}(w, g, max_b, mean_ne)
     end
-    return HolsteinParams(1, hopping_matrix2dict(t), interaction, w, g, max_b)
 end
 
 
@@ -283,20 +301,71 @@ end
 # Calculation set up #
 ######################
 
-"""
-    CalcConfig
+# Check for duplicate Hamiltonian terms
+function find_duplicate(terms::Tuple)
+    for (i, t) in enumerate(terms)
+        T = typeof(t)
+        for s in terms[i+1:end]
+            typeof(s) === T && return T
+        end
+    end
+    return nothing
+end
 
-Holds all configuration information for a lattice calculation, including
-symmetries and model parameters.
+"""
+    CalcConfig{T<:AbstractFloat, HamiltonianTerms<:Tuple{Vararg{AbstractHamiltonianTerm}}}
+
+Holds all configuration information for a lattice or many-body calculation,
+including symmetries, the base Hubbard Hamiltonian, and optional additional Hamiltonian terms.
 
 # Fields
 - `symmetries::SymmetryConfig`  
-    Contains particle and spin symmetries, unit cell width, and optional filling.
+    Contains particle-number and spin symmetries, unit-cell geometry, and optional filling.
+- `hubbard::HubbardParams{T}`  
+    Base electronic Hamiltonian parameters (bands, hopping, and two-body interactions).
+- `terms::HamiltonianTerms`  
+    Tuple of additional Hamiltonian terms (subtypes of `AbstractHamiltonianTerm`).
 
-- `model::ModelParams{Float64}`  
-    Contains the Hamiltonian parameters: number of bands, hopping amplitudes, and two-body interactions.
+# Constructors
+- `CalcConfig(symmetries, hubbard, terms)` — creates a configuration with specified
+  symmetries, Hubbard parameters, and extra terms. Duplicate term types are checked,
+  and band consistency is enforced.
+- `CalcConfig(symmetries, hubbard, term)` — convenience constructor with one extra term (`terms = (term,)`).
+- `CalcConfig(symmetries, hubbard)` — convenience constructor with no extra terms (`terms = ()`).
 """
-struct CalcConfig{M}
+struct CalcConfig{
+    T<:AbstractFloat,
+    HamiltonianTerms<:Tuple{Vararg{AbstractHamiltonianTerm}}
+}
     symmetries::SymmetryConfig
-    model::M
+    hubbard::HubbardParams
+    terms::HamiltonianTerms
+
+    function CalcConfig(
+                symmetries::SymmetryConfig,
+                hubbard::HubbardParams{T},
+                terms::HamiltonianTerms
+            ) where {T<:AbstractFloat, HamiltonianTerms<:Tuple{Vararg{AbstractHamiltonianTerm}}}
+
+        dup = find_duplicate(terms)
+        dup === nothing || error("Duplicate Hamiltonian term detected: $dup")
+
+        bands = hubbard.bands
+        for term in terms
+            if :bands in fieldnames(typeof(term))
+                @assert term.bands == bands "Number of bands in HubbardParams does not match number of bands in $term"
+            end
+            if term isa HolsteinTerm
+                @assert length(term.g) == bands "Length of electron-phonon coupling vector does not match number of bands in HubbardParams"
+            end
+        end
+
+        new{T, HamiltonianTerms}(symmetries, hubbard, terms)
+    end
+    CalcConfig(
+            symmetries::SymmetryConfig, 
+            hubbard::HubbardParams{T}, 
+            term::AbstractHamiltonianTerm
+        ) where {T<:AbstractFloat} = CalcConfig(symmetries, hubbard, (term,))
+    CalcConfig(symmetries::SymmetryConfig, hubbard::HubbardParams{T}) where {T<:AbstractFloat} = CalcConfig(symmetries, hubbard, ())
 end

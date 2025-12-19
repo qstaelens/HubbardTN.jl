@@ -16,85 +16,75 @@ function dim_state(ψ::InfiniteMPS)
 end
 
 """
-    density_e(ψ::InfiniteMPS, symm::SymmetryConfig)
+    density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the number of electrons per site in the unit cell.
 """
-function density_e(ψ::InfiniteMPS, symm::SymmetryConfig)
+function density_e(ψ::InfiniteMPS, calc::CalcConfig)
+    symm = calc.symmetries
     n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-    bands = Int(length(ψ)/symm.cell_width)
 
-    Ne = zeros(bands,symm.cell_width)
+    bands = calc.hubbard.bands
+
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    boson_site = (idx === nothing ? 0 : 1)
+
+    Ne = zeros(bands, symm.cell_width)
     for i in 1:bands
         for j in 1:symm.cell_width
-            Ne[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n))
+            site = i+(j-1)*(bands+boson_site)
+            Ne[i,j] = real(expectation_value(ψ, site => n))
         end
     end
     
     return Ne
 end
 
-function density_e_HH(ψ::InfiniteMPS, symm::SymmetryConfig)
-    n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-
-    Ne = zeros(1,symm.cell_width)
-    for j in 1:symm.cell_width
-        Ne[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n))
-    end
-    
-    return Ne
-end
-
 """
-    density_b(ψ::InfiniteMPS, symm::SymmetryConfig)
+    density_b(ψ::InfiniteMPS, calc::CalcConfig)
 
-Compute the number of phonons per site in the unit cell.
+Compute the number of bosons per site in the unit cell.
 """
+function density_b(ψ::InfiniteMPS, calc::CalcConfig)
+    symm = calc.symmetries
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
 
-function density_b(ψ::InfiniteMPS, symm::SymmetryConfig, max_b::Int64)
     n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
+    bands = calc.hubbard.bands
 
-    Nb = zeros(1,symm.cell_width)
+    Nb = zeros(1, symm.cell_width)
     for j in 1:symm.cell_width
-        Nb[1,j] = real(expectation_value(ψ, (j*2) => n))
+        Nb[1,j] = real(expectation_value(ψ, (j-1)*(bands+1) => n))
     end
     
     return Nb
 end
 
 """
-    density_spin(ψ::InfiniteMPS, symm::SymmetryConfig)
+    density_spin(ψ::InfiniteMPS, symm::CalcConfig)
 
-Compute the spin density per site in the unit cell.
+Compute the electron spin density per site in the unit cell.
 """
-function density_spin(ψ::InfiniteMPS, symm::SymmetryConfig)
+function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
+    symm = calc.symmetries
+
     n_up = number_up(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
     n_down = number_down(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
 
-    bands = Int(length(ψ)/symm.cell_width)
+    bands = calc.hubbard.bands
 
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    boson_site = (idx === nothing ? 0 : 1)
+    
     Nup = zeros(bands,symm.cell_width);
     Ndown = zeros(bands,symm.cell_width);
     for i in 1:bands
         for j in 1:symm.cell_width
-            Nup[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n_up))
-            Ndown[i,j] = real(expectation_value(ψ, (i+(j-1)*bands) => n_down))
+            site = i+(j-1)*(bands+boson_site)
+            Nup[i,j] = real(expectation_value(ψ, site => n_up))
+            Ndown[i,j] = real(expectation_value(ψ, site => n_down))
         end
-    end
-
-    return Nup, Ndown
-end
-
-function density_spin_HH(ψ::InfiniteMPS, symm::SymmetryConfig)
-    n_up = number_up(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-    n_down = number_down(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-
-    Nup = zeros(1,symm.cell_width);
-    Ndown = zeros(1,symm.cell_width);
-
-    for j in 1:symm.cell_width
-        Nup[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n_up))
-        Ndown[1,j] = real(expectation_value(ψ, (1+(j-1)*2) => n_down))
     end
 
     return Nup, Ndown
@@ -105,8 +95,8 @@ end
 
 Compute the staggered magnetization in an InfiniteMPS.
 """
-function calc_ms(ψ::InfiniteMPS, symm::SymmetryConfig)
-    up, down = density_spin(ψ, symm)
+function calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
+    up, down = density_spin(ψ, calc)
     Mag = up - down
     if !all(x -> isapprox(abs(x),abs(Mag[1,1]),rtol=10^(-6)), vec(Mag))
         @warn "Staggerd magnetization varies across unit cell: returning value for first site only."

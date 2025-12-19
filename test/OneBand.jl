@@ -19,7 +19,7 @@ E_norm = [-1.26967, -1.03717, -0.84145, -0.68707, -0.57119]
 @testset "Dependence on parameters U1xSU2" for u in u_range
     ind = Int(u) + 1
     symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (1,1))
-    model = ModelParams([0.0, 1.0], [u])
+    model = HubbardParams([0.0, 1.0], [u])
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
@@ -35,7 +35,7 @@ E_norm = [-1.273, -1.540, -1.844, -2.190, -2.5736]
 @testset "Dependence on parameters TrivialxU1" for u in u_range
     ind = Int(u) + 1
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
-    model = ModelParams([u/2, 1.0], [u])
+    model = HubbardParams([u/2, 1.0], [u])
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
@@ -60,7 +60,7 @@ E_norm = [-0.73923, -0.48432, 1.76080]
 
 @testset "Dependence on filling" for i in eachindex(P)
     symm = SymmetryConfig(U1Irrep, U1Irrep, 2*Q[i], (P[i],Q[i]))
-    model = ModelParams(t, u)
+    model = HubbardParams(t, u)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
@@ -76,7 +76,7 @@ end
 ###############
 
 symm = SymmetryConfig(U1Irrep, Trivial, 2, (1,1))
-model = ModelParams([0.0, 1.0], [5.0])
+model = HubbardParams([0.0, 1.0], [5.0])
 calc = CalcConfig(symm, model)
 
 gs = compute_groundstate(calc; tol=tol/10)
@@ -105,12 +105,12 @@ end
     @test typeof(D) == Vector{Int64}
     @test D > zeros(size(D))
 
-    electron_number = sum(density_e(psi, symm))/length(psi)
+    electron_number = sum(density_e(psi, calc))/length(psi)
     @test sum(electron_number)≈symm.filling[1]/symm.filling[2] atol=1e-8
 
-    Nup, Ndown = density_spin(psi, symm)
+    Nup, Ndown = density_spin(psi, calc)
     @test sum(Nup+Ndown)/length(psi)≈symm.filling[1]/symm.filling[2] atol=1e-8
 
-    ms = calc_ms(psi, symm)
+    ms = calc_ms(psi, calc)
     @test typeof(ms) == Float64
 end

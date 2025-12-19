@@ -12,7 +12,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 
-model = ModelParams(t, U)
+model = HubbardParams(t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
@@ -31,12 +31,12 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e(ψ, symm)
+Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
 
-u, d = density_spin(ψ, symm)
+u, d = density_spin(ψ, calc)
 println("Spin up per site: ", u)
 println("Spin down per site: ", d)
 
-Ms = calc_ms(ψ, symm)
+Ms = calc_ms(ψ, calc)
 println("Staggered magnetization: ", Ms)

@@ -18,8 +18,8 @@ E_norm = -0.32384
     t = [0.0, 1.0]
     U = [6.0]
     V = [2.0]
-    model = ModelParams(t, U, V)
-    calc = CalcConfig(symm, model)
+    model = HubbardParams(t, U)
+    calc = CalcConfig(symm, model, ThreeBodyTerm(V))
     gs = compute_groundstate(calc; tol=tol/10)
     ψ₀ = gs["groundstate"]
     H = gs["ham"]

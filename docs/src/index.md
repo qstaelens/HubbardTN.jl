@@ -11,7 +11,7 @@ You can install `HubbardTN` directly from its GitHub repository:
 
 ```julia
 julia> using Pkg
-julia> Pkg.add(url="https://github.com/DaanVrancken/HubbardTN.jl")
+julia> Pkg.add("HubbardTN")
 ```
 After installation, load the package with:
 ```
@@ -32,7 +32,7 @@ A typical HubbardTN simulation follows a clear sequence of steps:
    These are specified in a [`SymmetryConfig`](@ref) object.
 
 2. **Specify the model parameters.**  
-   Insert your model’s coupling constants and hopping terms into a [`ModelParams`](@ref) object.  
+   Insert your model’s coupling constants and hopping terms into a [`HubbardParams`](@ref) object.  
    This defines the Hamiltonian that will be constructed.
 
 3. **Compute physical quantities.**  
@@ -40,3 +40,4 @@ A typical HubbardTN simulation follows a clear sequence of steps:
    - Compute the **ground state** using [`compute_groundstate`](@ref).
    - Obtain **excitations** with [`compute_excitations`](@ref).
    - Investigate **domain walls** via [`compute_domainwall`](@ref).
+   - ...

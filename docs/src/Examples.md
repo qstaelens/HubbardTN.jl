@@ -26,7 +26,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 
-model = ModelParams(t, U)
+model = HubbardParams(t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
@@ -48,7 +48,7 @@ ex = compute_excitations(gs, momenta, charges)
   - The **particle** and **spin** symmetries (`Trivial`, `U1Irrep`, or `SU2Irrep`)
   - The **number of sites in the unit cell** (`cell_width`)
   - The **filling fraction**, defined by `N_electrons / N_sites` via the keyword `filling=(N_electrons, N_sites)`
-- The `ModelParams` constructor shown above is the simplest form, suitable for single-band Hubbard models.
+- The `HubbardParams` constructor shown above is the simplest form, suitable for single-band Hubbard models.
 
 ---
 
@@ -85,7 +85,7 @@ U = Dict(
     (2,1,2,1) => 1.0
 )
 
-model = ModelParams(bands, t, U)
+model = HubbardParams(bands, t, U)
 calc = CalcConfig(symm, model)
 
 # Step 3: Compute the ground state
@@ -114,5 +114,5 @@ ex = compute_excitations(gs, momenta, charges)
 ---
 
 📘 **Tip:**  
-For advanced use cases (custom operators, constrained symmetry sectors, or DMRG sweep control), see the API reference for  
-[`compute_groundstate`](@ref), [`compute_excitations`](@ref), and [`ModelParams`](@ref).
+For advanced use cases (custom operators, constrained symmetry sectors, or DMRG sweep control), see the API reference for 
+[`HubbardParams`](@ref), [`CalcConfig`](@ref), and [`compute_groundstate`](@ref).

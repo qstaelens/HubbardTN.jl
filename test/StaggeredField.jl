@@ -6,7 +6,6 @@ println("
 
 tol = 2e-1
 
-
 # Symmetries
 particle_symmetry = U1Irrep
 spin_symmetry = U1Irrep
@@ -30,8 +29,8 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
 
     for i in 1:max_iter
         # Step 2: Set up model parameters with current Ms
-        model = ModelParams(t, U; J_M0=(J_inter, Ms))
-        calc = CalcConfig(symm, model)
+        model = HubbardParams(t, U)
+        calc = CalcConfig(symm, model, StaggeredField(J_inter, Ms))
 
         # Step 3: Compute the ground state
         gs = compute_groundstate(calc; svalue = svalue, init_state=ψ_init)
@@ -45,7 +44,7 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         push!(E_list, E)
         
         # Step 4: Calculate new Ms
-        Ms_new = calc_ms(ψ, symm)
+        Ms_new = calc_ms(ψ, calc)
         Ms_change = abs(Ms_new - Ms)
         push!(Ms_list, Ms_new)
         
