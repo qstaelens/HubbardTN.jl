@@ -31,12 +31,12 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e(ψ, symm)
+Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
 
-u, d = density_spin(ψ, symm)
+u, d = density_spin(ψ, calc)
 println("Spin up per site: ", u)
 println("Spin down per site: ", d)
 
-Ms = calc_ms(ψ, symm)
+Ms = calc_ms(ψ, calc)
 println("Staggered magnetization: ", Ms)

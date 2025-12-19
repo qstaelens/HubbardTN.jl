@@ -24,13 +24,6 @@ unit cell width, and optional filling information.
 - `cell_width` must be positive.
 - If `particle_symmetry` is `U1Irrep` and `filling` is specified, the constructor ensures that `cell_width` is a multiple of
   `filling[2] * (mod(filling[1], 2) + 1)` to accommodate the specified filling.
-
-# Examples
-    # Trivial particle and spin symmetry, default cell width
-    cfg1 = SymmetryConfig(Trivial, Trivial)
-
-    # U(1) particle symmetry with SU(2) spin symmetry, cell width 2, filling 1/2
-    cfg2 = SymmetryConfig(U1Irrep, SU2Irrep, cell_width=2, filling=(1,2))
 """
 struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}

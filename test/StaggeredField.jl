@@ -44,7 +44,7 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         push!(E_list, E)
         
         # Step 4: Calculate new Ms
-        Ms_new = calc_ms(ψ, symm)
+        Ms_new = calc_ms(ψ, calc)
         Ms_change = abs(Ms_new - Ms)
         push!(Ms_list, Ms_new)
         

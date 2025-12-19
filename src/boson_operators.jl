@@ -26,7 +26,7 @@ function b_plus(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cut
     I = sectortype(b⁺)
     charges = (0 for _ in 1:length(fieldtypes(I)[1].parameters))
     for i in 1:cutoff
-        block(b⁺, I(charges...))[i + 1, i] = sqrt(i)
+        block(b⁺, I(charges...))[i+1, i] = sqrt(i)
     end
 
     return b⁺
@@ -45,7 +45,7 @@ function b_min(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cuto
     I = sectortype(b⁻)
     charges = (0 for _ in 1:length(fieldtypes(I)[1].parameters))
     for i in 1:cutoff
-        block(b⁻, I(charges...))[i + 1, i] = sqrt(i)
+        block(b⁻, I(charges...))[i, i+1] = sqrt(i)
     end
 
     return b⁻
@@ -64,7 +64,7 @@ function number_b(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, c
     I = sectortype(nb)
     charges = (0 for _ in 1:length(fieldtypes(I)[1].parameters))
     for i in 1:cutoff
-        block(nb, I(charges...))[i + 1, i + 1] = i
+        block(nb, I(charges...))[i+1, i+1] = i
     end
 
     return nb

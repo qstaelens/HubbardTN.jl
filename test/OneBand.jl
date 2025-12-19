@@ -105,12 +105,12 @@ end
     @test typeof(D) == Vector{Int64}
     @test D > zeros(size(D))
 
-    electron_number = sum(density_e(psi, symm))/length(psi)
+    electron_number = sum(density_e(psi, calc))/length(psi)
     @test sum(electron_number)≈symm.filling[1]/symm.filling[2] atol=1e-8
 
-    Nup, Ndown = density_spin(psi, symm)
+    Nup, Ndown = density_spin(psi, calc)
     @test sum(Nup+Ndown)/length(psi)≈symm.filling[1]/symm.filling[2] atol=1e-8
 
-    ms = calc_ms(psi, symm)
+    ms = calc_ms(psi, calc)
     @test typeof(ms) == Float64
 end

@@ -71,7 +71,7 @@ E_ref = -2.038990604938512
     model = HubbardParams([2.0, 1.0], [4.0])
     calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
-    gs = compute_groundstate(calc)
+    gs = compute_groundstate(calc; svalue=3.0)
     ψ  = gs["groundstate"]
     H  = gs["ham"]
 
@@ -79,8 +79,8 @@ E_ref = -2.038990604938512
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
     @test E0 ≈ E_ref atol=tol
 
-    Ne = density_e_HH(ψ, symm)
-    Nb = density_b(ψ, symm, max_b)
+    Ne = density_e(ψ, calc)
+    Nb = density_b(ψ, calc)
 
     # phonons are present
     @test Nb[1] > 0.0

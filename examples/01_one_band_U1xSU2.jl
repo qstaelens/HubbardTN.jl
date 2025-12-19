@@ -32,7 +32,7 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e(ψ, symm)
+Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
 
 # Step 4: Compute first excitation in fZ2(0) × U1Irrep(0) × SU2Irrep(0) sector

@@ -1,5 +1,5 @@
 using HubbardTN
-using TensorKit, MPSKit, Statistics
+using TensorKit, MPSKit
 
 # Step 1: Define the symmetries
 particle_symmetry = Trivial
@@ -12,7 +12,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 w = 1.0
-g = 0.0
+g = [0.5]
 max_b = 4
 
 model = HubbardParams(t, U)
@@ -34,14 +34,14 @@ ent = entanglement_spectrum(ψ)
 println("Entanglement spectrum: \n")
 display(ent)
 
-Ne = density_e_HH(ψ, symm)
+Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
-println("Mean number of electrons = ", mean(Ne))
+println("Mean number of electrons = ", sum(Ne)/length(Ne))
 
-Nb = density_b(ψ, symm, max_b)
+Nb = density_b(ψ, calc)
 println("Number of phonons per site: ", Nb)
-println("Mean number of phonons = ", mean(Nb))
+println("Mean number of phonons = ", sum(Nb)/length(Nb))
 
-u, d = density_spin_HH(ψ, symm)
+u, d = density_spin(ψ, calc)
 println("Spin up: $u")
 println("Spin down: $d")

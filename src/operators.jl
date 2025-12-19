@@ -36,7 +36,6 @@ function hubbard_space(::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,I
         (0, -P, 0) => 1, (1, Q-P, 1 // 2) => 1, (0, 2Q-P, 0) => 1
     )
 end
-# How to pass (P,Q) to the SU2 case?
 function hubbard_space(::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
     return Vect[FermionParity ⊠ SU2Irrep]((0, 0) => 2, (1, 1 // 2) => 1)
 end
