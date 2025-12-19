@@ -26,7 +26,7 @@ E_ref = -1.2713317702997016
     @test E0 ≈ E_ref atol=tol
 
     # phonon occupation check
-    Nb = density_b(ψ, symm, max_b)
+    Nb = density_b(ψ, calc)
 
     @test Nb[1] ≈ 0.0 atol=tol
     @test Nb[2] ≈ 0.0 atol=tol
@@ -52,7 +52,7 @@ E_ref = -3.2705801927593416
     @test E0 ≈ E_ref atol=tol
 
     # phonon occupation check
-    Nb = density_b(ψ, symm, max_b)
+    Nb = density_b(ψ, calc)
 
     @test Nb[1] ≈ max_b atol=tol
     @test Nb[2] ≈ max_b atol=tol
