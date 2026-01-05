@@ -21,7 +21,7 @@ J_inter = 0.00115          # Inter-chain coupling / coupling constant
 # Main function
 function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64}, 
                                 U::Vector{Float64}, J_inter::Float64; 
-                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=2.5)
+                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=3.0)
     Ms = 0.0
     ψ_init = nothing
     Ms_list = Float64[Ms]
@@ -58,8 +58,8 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
     return E_list, Ms_list
 end
 
-E_norm = [0.8574597873171289, 0.8575037848413146, 0.8575008308545669, 0.8575010718651674, 0.8575010426788501]
-Ms_norm = [0.0, 0.19747463281272887, 0.18381480739281603, 0.18488147851279135, 0.18474268922613346, 0.1847491211944738]
+E_norm = [0.8573199392123321, 0.8572936394684572, 0.8572939920475093, 0.8572928105424324, 0.8572927048812922]
+Ms_norm = [0.0, 0.14651530948645353, 0.164353722686657, 0.17033500288817305, 0.17091587359555932, 0.17092203478471346]
 
 @testset "find " begin
     E_list, Ms_list = run_self_consistent_ms(symm, t, U, J_inter)

@@ -1,5 +1,6 @@
 using HubbardTN
 using TensorKit, MPSKit
+using Revise
 
 # This example simulates the mean-field coupling of two magnetic chains
 # by self-consistently calculating the staggered magnetization Ms.

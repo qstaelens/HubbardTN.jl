@@ -297,8 +297,8 @@ function hamiltonian_term(
     Ms = term.Ms
     period = bands + boson_site
     phase = (-1) .^ (div.(0:(period*cell_width-1), period))
-
-    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width if i%period != 0]
+    
+    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width]
 end
 # Holstein coupling term
 function hamiltonian_term(
