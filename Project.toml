@@ -1,12 +1,7 @@
 name = "HubbardTN"
 uuid = "31f8dd75-9f76-4da8-9aed-ce20a80dcd69"
-<<<<<<< HEAD
-version = "0.4.0"
-authors = ["Daan Vrancken", "Quentin Staelens"]
-=======
 authors = ["Daan Vrancken", "Quentin Staelens"]
 version = "0.4.1"
->>>>>>> af2b6a11c9c55a71fe1769b664c3566fbf2aa99e
 
 [deps]
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
