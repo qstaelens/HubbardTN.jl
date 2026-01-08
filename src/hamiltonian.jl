@@ -283,7 +283,7 @@ function hamiltonian_term(
     B = term.B
     period = bands + boson_site
 
-    return [(i,) => -B*ops.Sz for i in 1:period*cell_width if i%period != 0]
+    return [(i,) => -B*ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
 end
 # Staggered magnetic field term
 function hamiltonian_term(
@@ -297,8 +297,13 @@ function hamiltonian_term(
     Ms = term.Ms
     period = bands + boson_site
     phase = (-1) .^ (div.(0:(period*cell_width-1), period))
+<<<<<<< HEAD
     
     return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width]
+=======
+
+    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
+>>>>>>> af2b6a11c9c55a71fe1769b664c3566fbf2aa99e
 end
 # Holstein coupling term
 function hamiltonian_term(

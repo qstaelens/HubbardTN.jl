@@ -7,7 +7,7 @@ To add this package to your Julia environment, do
 julia> using Pkg
 julia> Pkg.add("HubbardTN")
 ```
-after which it can be used by loading
+after which it can be used by loading 
 ```
 julia> using HubbardTN
 ```
