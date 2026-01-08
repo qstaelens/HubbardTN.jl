@@ -87,3 +87,45 @@ function compute_domainwall(
 
     return Dict("Es" => Es, "qps" => qps, "momenta" => momenta)
 end
+
+"""
+    compute_bandgap(groundstate_dict, momenta; nums=1)
+
+Compute the single-particle (charge) band gap from particle–addition and particle–removal excitations.
+
+# Arguments
+- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`, containing the ground state, Hamiltonian, and environments.
+- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations are evaluated.
+- `nums::Int64=1`: Number of excitations computed per momentum in each sector.
+
+# Returns
+- `(gap, kmin)`: The minimum value of `E_add(k) + E_remove(k)` and the corresponding momentum.
+"""
+function compute_bandgap(gs, momenta; nums::Int64=1)
+    ex_add = compute_excitations(gs, momenta, [1,  1.0, 1//2]; nums=nums)
+    ex_rem = compute_excitations(gs, momenta, [1, -1.0, 1//2]; nums=nums)
+
+    Es = ex_add["Es"] .+ ex_rem["Es"]
+    gap, k = findmin(real.(Es[:,1]))
+    return gap, momenta[k]
+end
+
+"""
+    compute_spingap(groundstate_dict, momenta; nums=1)
+
+Compute the spin gap from spin-flip excitations above the ground state.
+
+# Arguments
+- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`, containing the ground state, Hamiltonian, and environments.
+- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations are evaluated.
+- `nums::Int64=1`: Number of excitations computed per momentum.
+
+# Returns
+- `(gap, kmin)`: The minimum excitation energy `E(k)` in the spin sector and the corresponding momentum.
+"""
+function compute_spingap(gs, momenta; nums::Int64=1)
+    ex = compute_excitations(gs, momenta, [0, 0.0, 1]; nums=nums)
+    Es = ex["Es"]
+    gap, k = findmin(real.(Es[:,1]))
+    return gap, momenta[k]
+end

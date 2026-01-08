@@ -6,7 +6,7 @@ export b_plus, b_min, number_b
 export SymmetryConfig, HubbardParams, CalcConfig
 export ThreeBodyTerm, MagneticField, StaggeredField, HolsteinTerm
 export hamiltonian, compute_groundstate, find_chemical_potential
-export compute_excitations, compute_domainwall
+export compute_excitations, compute_domainwall, compute_bandgap, compute_spingap
 export dim_state, density_e, density_b, density_spin, calc_ms
 export save_computation, load_computation, save_state, load_state, dict_tag
 
