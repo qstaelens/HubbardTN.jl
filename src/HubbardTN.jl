@@ -8,11 +8,11 @@ export ThreeBodyTerm, MagneticField, StaggeredField, HolsteinTerm
 export hamiltonian, compute_groundstate, find_chemical_potential
 export compute_excitations, compute_domainwall
 export dim_state, density_e, density_b, density_spin, calc_ms
-export save_computation, load_computation, save_state, load_state
+export save_computation, load_computation, save_state, load_state, dict_tag
 
 using MPSKit, MPSKitModels
 using TensorKit, KrylovKit
-using JLD2
+using JLD2, Printf
 
 include("models.jl")
 include("operators.jl")

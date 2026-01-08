@@ -187,3 +187,36 @@ function load_state(path::String)
 
     return InfiniteMPS(PeriodicArray(A))
 end
+
+compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0")
+
+function dict_tag(d::Dict; step::Float64 = 1e-4)
+    pairs = sort(collect(d); by = first)
+    parts = String[]
+
+    for (k, v) in pairs
+        (v isa AbstractFloat && iszero(v)) && continue
+        if k isa Tuple && length(k) == 2
+            # hopping: t_ij, keep i<j
+            i, j = k
+            i > j && continue
+            push!(parts, "t$(i)$(j)_" * compact_float(v))
+
+        elseif k isa Tuple && length(k) == 4
+            # interaction: U_ijkl, canonicalize symmetry
+            i, j, l, m = k
+
+            a, b = i ≤ j ? (i, j) : (j, i)
+            c, d = l ≤ m ? (l, m) : (m, l)
+            (a, b) > (c, d) && ((a, b, c, d) = (c, d, a, b))
+
+            push!(parts, "U$(a)$(b)$(c)$(d)_" * compact_float(v))
+
+        else
+            error("Unsupported key in dict_tag: $k")
+        end
+    end
+
+    unique!(parts)
+    return isempty(parts) ? "0" : join(parts, "_")
+end
