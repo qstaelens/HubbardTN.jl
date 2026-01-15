@@ -206,11 +206,15 @@ function dict_tag(d::Dict; step::Float64 = 1e-4)
             # interaction: U_ijkl, canonicalize symmetry
             i, j, l, m = k
 
-            a, b = i ≤ j ? (i, j) : (j, i)
-            c, d = l ≤ m ? (l, m) : (m, l)
-            (a, b) > (c, d) && ((a, b, c, d) = (c, d, a, b))
+            if (i, j, l, m) > (j, i, m, l)
+                i, j, l, m = j, i, m, l
+            end
 
-            push!(parts, "U$(a)$(b)$(c)$(d)_" * compact_float(v))
+            if (i, j) > (l, m)
+                i, j, l, m = l, m, i, j
+            end
+
+            push!(parts, "U$(i)$(j)$(l)$(m)_" * compact_float(v))
 
         else
             error("Unsupported key in dict_tag: $k")

@@ -13,16 +13,40 @@ filling = (1, 1)
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 
 # Model parameters (used inside the loop)
-t = [0.0, 0.49, 0.078]     # [chemical_potential, nn_hopping, nnn_hopping, ...]
-U = [3.56, 1.09]           # [on-site interaction, nn_interaction, ...]
-J_inter = 0.00115          # Inter-chain coupling / coupling constant
+
+t = Dict(
+    (1,2) => 0.486, (2,1) => 0.486,
+    (1,3) => 0.077, (3,1) => 0.077,
+    (1,4) => 0.018, (4,1) => 0.018
+)
+
+# Interaction terms:
+# (i,j,k,l) correspond to U_ijkl c⁺_i c⁺_j c_k c_l
+U = Dict(
+    (1,1,1,1) => 3.411,
+    (1,2,2,1) => 1.042,
+    (2,1,1,2) => 1.042,
+    (1,2,1,2) => 0.033,
+    (2,1,2,1) => 0.033,
+    (1,1,2,2) => 0.033,
+    (2,2,1,1) => 0.033
+)
+
+t_tag = dict_tag(t)
+U_tag = dict_tag(U)
+
+J_inter = 0.00167          # Inter-chain coupling / coupling constant
 
 # Main function
-function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64}, 
-                                U::Vector{Float64}, J_inter::Float64; 
-                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=2.5)
+function run_self_consistent_ms(symm::SymmetryConfig, t::AbstractDict{Tuple{Int,Int},Float64}, U::AbstractDict{Tuple{Int,Int,Int,Int},Float64}, J_inter::Float64; 
+                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=4.5)
     Ms = 0.0
-    ψ_init = nothing
+
+    path = "data/"
+    filename = "04__$(t_tag)_$(U_tag)_$(J_inter)_1_s=4.4"
+    file_path = joinpath(path, filename * ".jld2")
+    gs = load_computation(file_path)
+    ψ_init = gs["groundstate"]
     Ms_list = Float64[Ms]
     E_list = Float64[]
 
@@ -32,11 +56,26 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         println("\n--- Iteration $i: Ms = $Ms ---")
         
         # Step 2: Set up model parameters with current Ms
-        model = HubbardParams(t, U)
+        model = HubbardParams(1, t, U)
         calc = CalcConfig(symm, model, StaggeredField(J_inter, Ms))
 
-        # Step 3: Compute the ground state
-        gs = compute_groundstate(calc; svalue = svalue, init_state=ψ_init)
+        filename = "04__$(t_tag)_$(U_tag)_$(J_inter)_$(i)_s=$(svalue)" 
+
+        path = "data/"
+        file_path = joinpath(path, filename * ".jld2")
+
+        gs = if isfile(file_path)
+            println("Loading existing computation:")
+            println(file_path)
+            load_computation(file_path)
+        else
+            # Step 3: Compute the ground state
+            println("Computing and saving:")
+            println(file_path)
+            gs = compute_groundstate(calc; svalue=svalue, init_state=ψ_init)
+            save_computation(gs, path, filename)
+            gs
+        end
         
         ψ = gs["groundstate"]
         ψ_init = ψ
@@ -45,6 +84,11 @@ function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64},
         E0 = expectation_value(ψ, H)
         E = sum(real(E0)) / length(H)
         push!(E_list, E)
+        
+        dim = dim_state(ψ)
+        println("Max bond dimension: ", maximum(dim))
+        Ne = density_e(ψ, calc)
+        println("Number of electrons per site: ", Ne)
         
         # Step 4: Calculate new Ms
         Ms_new = calc_ms(ψ, calc)
