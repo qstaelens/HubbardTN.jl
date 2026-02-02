@@ -171,12 +171,11 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
     ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
-        n        = number_e(ps, ss; filling=fill),
-        c⁺pair = create_pair_onesite(ps, ss; filling=fill),
-        cpair = delete_pair_onesite(ps, ss; filling=fill)
+        n        = number_e(ps, ss; filling=fill)        
     )
     if ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+        ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
     end
 
     phonon_space = []
