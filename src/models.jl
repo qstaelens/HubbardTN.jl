@@ -296,6 +296,26 @@ struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
     end
 end
 
+"""
+    Bollmark{T<:AbstractFloat} <: AbstractHamiltonianTerm
+
+Bollmark term used in a perturbative treatment, parameterizing effective interchain/interladder
+processes. Ref: Bollmark et al., Phys. Rev. X 13, 011039 (2023)
+
+# Fields
+- `alpha::Vector{T}`
+    Self-consistent parameters (e.g. mean-field amplitudes) associated with the first Bollmark term.
+- `beta::Vector{T}`
+    Self-consistent parameters (e.g. mean-field amplitudes) associated with the second Bollmark term.
+# Notes
+- `alpha` and `beta` are not fixed couplings: they should be iterated to convergence together
+  with the ground state (or other target state) to satisfy the chosen self-consistency condition.
+"""
+struct Bollmark{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    alpha::Vector{T}
+    beta::Vector{T}
+end
+
 
 ######################
 # Calculation set up #

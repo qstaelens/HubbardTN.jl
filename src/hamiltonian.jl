@@ -186,6 +186,11 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
         phonon_space = [boson_space(ps, ss, max_b; filling=fill)]
     end
 
+    if ps === Trivial && ss === U1Irrep
+        ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss),
+                          cpair = delete_pair_onesite(ps, ss)))
+    end
+
     electron_spaces = [electron_space for _ in 1:bands]
     spaces = append!(electron_spaces, phonon_space)
 
@@ -326,4 +331,42 @@ function hamiltonian_term(
                         for j in phonon_sites
                         if j-period < i < j
                     ])
+end
+# Bollmark term
+function hamiltonian_term(
+                    term::Bollmark, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_site::Int64
+                )
+
+    alpha = term.alpha
+    a0, a01 = alpha[1], alpha[2]
+    beta = term.beta
+    b0, b01 = beta
+
+    period = bands + boson_site
+    electron_sites = [i for i in 1:period*cell_width if (i%period != 0 || period==bands)]
+
+    hopping_onsite = ops.c⁺pair + ops.cpair
+    hopping_pair = HubbardOperators.d_plus_u_plus(ComplexF64,Trivial,U1Irrep) + HubbardOperators.u_min_d_min(ComplexF64,Trivial,U1Irrep)
+
+    h = Any[(i,) => -a0*hopping_onsite for i in electron_sites]
+
+    h = append!(h, [
+        (electron_sites[n], electron_sites[n+1]) => -a01*hopping_pair
+        for n in 1:(length(electron_sites)-1)
+    ])
+    #h = append!(h, [(i,) => b0 * ops.n for i in electron_sites])  #This chemical potential renormalization would change the density in our system, Bollmark et al., Phys. Rev. X 13, 011039 (2023) also neglect this term.
+    h = append!(h, [
+        (electron_sites[n], electron_sites[n+1]) => b01 * ops.c⁺c
+        for n in 1:(length(electron_sites)-1)
+    ])
+    h = append!(h, [
+        (electron_sites[n+1], electron_sites[n]) => b01 * ops.c⁺c
+        for n in 1:(length(electron_sites)-1)
+    ])
+
+    return h
 end

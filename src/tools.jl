@@ -105,6 +105,45 @@ function calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 
+function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty, tz, Ep)
+    ps   = symm.particle_symmetry
+    ss   = symm.spin_symmetry
+
+    @assert ty == tz "We currently assumes ty == tz"
+    @assert Ep != 0  "Ep must be nonzero"
+
+    # onsite pair annihilation Δ = c↓ c↑
+    Δ  = delete_pair_onesite(ps, ss)
+    c0 = real(expectation_value(ψ, 1 => Δ))
+
+    c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+
+    a01 = 2 * 4 * tz^2 * c01 / Ep
+    a0  = 2 * 4 * tz^2 * c0  / Ep
+
+    return [a0, a01]
+end
+
+function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty, tz, Ep)
+    ps   = symm.particle_symmetry
+    ss   = symm.spin_symmetry
+
+    @assert ty == tz "We currently assumes ty == tz"
+    @assert Ep != 0  "Ep must be nonzero"
+
+    n = number_e(ps, ss)
+    c0 = real(expectation_value(ψ, 1 => n))
+    c = c_plusmin(ps, ss)
+    c01 = real(expectation_value(ψ, (1,2) => c))
+
+    b01 = 2 * 4 * tz^2 * c01 / Ep
+    b0  = 2 * 4 * tz^2 * c0  / Ep
+
+    return [b0, b01]
+end
+
+
+
 ##########
 # Saving #
 ##########

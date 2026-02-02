@@ -21,7 +21,7 @@ J_inter = 0.00115          # Inter-chain coupling / coupling constant
 # Main function
 function run_self_consistent_ms(symm::SymmetryConfig, t::Vector{Float64}, 
                                 U::Vector{Float64}, J_inter::Float64; 
-                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=3.0)
+                                max_iter::Int=5, tol::Float64=1e-4, svalue::Float64=2.5)
     Ms = 0.0
     ψ_init = nothing
     Ms_list = Float64[Ms]

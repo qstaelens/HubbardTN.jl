@@ -129,3 +129,29 @@ function compute_spingap(gs, momenta; nums::Int64=1)
     gap, k = findmin(real.(Es[:,1]))
     return gap, momenta[k]
 end
+
+"""
+    compute_pairing_energy(groundstate_dict, momenta; nums=1)
+
+Compute the pairing energy from single-particle and double-particle
+addition excitations.
+
+# Arguments
+- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`,
+  containing the ground state, Hamiltonian, and environments.
+- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations
+  are evaluated.
+- `nums::Int64=1`: Number of excitations computed per momentum in each sector.
+
+# Returns
+- `(gap, kmin)`: The minimum value of `2 * E_add(k) - E_double(k)` and the
+  corresponding momentum.
+"""
+function compute_pairing_energy(gs, momenta; nums::Int64=1)
+    ex_add = compute_excitations(gs, momenta, [1,  1.0, 1//2]; nums=nums)
+    ex_double = compute_excitations(gs, momenta, [0, 2.0, 0]; nums=nums)
+
+    Es = 2*ex_add["Es"] .- ex_double["Es"]
+    gap, k = findmin(real.(Es[:,1]))
+    return gap, momenta[k]
+end
