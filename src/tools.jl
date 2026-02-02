@@ -114,7 +114,7 @@ Returns `[a0, a01]`, where:
 
 Only onsite and nearest-neighbor terms are included.
 """
-function get_alpha(ψ::InfiniteMPS,symm::SymmetryConfig,ty::Float,tz::Float,Ep::Float)
+function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
@@ -142,7 +142,7 @@ Returns `[b0, b01]`, where:
 
 Only onsite and nearest-neighbor terms are included.
 """
-function get_beta(ψ::InfiniteMPS,symm::SymmetryConfig,ty::Float,tz::Float,Ep::Float)
+function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
