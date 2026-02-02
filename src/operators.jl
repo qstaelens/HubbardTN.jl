@@ -483,7 +483,7 @@ function create_pair_onesite(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tupl
     t = single_site_operator(T, U1Irrep, SU2Irrep; filling=filling)
     P, Q = filling
     I = sectortype(t)
-    t[(I(0, 2Q-P, 0), dual(I(0, -P, 0)))][1, 1] = 1
+    t[(I(0, 2Q-P, 0), dual(I(0, -P, 0)))] .= 1
     return t
 end
 function create_pair_onesite(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
@@ -530,7 +530,7 @@ function delete_pair_onesite(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tupl
     t = single_site_operator(T, U1Irrep, SU2Irrep; filling=filling)
     P, Q = filling
     I = sectortype(t)
-    t[(I(0, -P, 0), dual(I(0, 2Q-P, 0)))][1, 1] = 1
+    t[(I(0, -P, 0), dual(I(0, 2Q-P, 0)))] .= 1
     return t
 end
 function delete_pair_onesite(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
