@@ -10,3 +10,5 @@ docs/site/
 # Ignore all data files
 /data/
 /examples/06_three_band.jl
+/examples/06_QS.jl
+/examples/04_QS.jl

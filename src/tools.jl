@@ -105,17 +105,26 @@ function calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 
-function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty, tz, Ep)
+"""
+Compute α-coefficients from pair correlators.
+
+Returns `[a0, a01]`, where:
+- `a0`  is the onsite contribution from ⟨c↓ c↑⟩,
+- `a01` is the nearest-neighbor contribution from ⟨c↑₁ c↓₂⟩.
+
+Only onsite and nearest-neighbor terms are included.
+"""
+function get_alpha(ψ::InfiniteMPS,symm::SymmetryConfig,ty::Float,tz::Float,Ep::Float)
+
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
-    @assert ty == tz "We currently assumes ty == tz"
+    @assert ty == tz "We currently assume ty == tz"
     @assert Ep != 0  "Ep must be nonzero"
 
     # onsite pair annihilation Δ = c↓ c↑
     Δ  = delete_pair_onesite(ps, ss)
     c0 = real(expectation_value(ψ, 1 => Δ))
-
     c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
 
     a01 = 2 * 4 * tz^2 * c01 / Ep
@@ -124,16 +133,26 @@ function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty, tz, Ep)
     return [a0, a01]
 end
 
-function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty, tz, Ep)
+"""
+Compute β-coefficients from density and hopping correlators.
+
+Returns `[b0, b01]`, where:
+- `b0`  is the onsite contribution from ⟨n⟩,
+- `b01` is the nearest-neighbor contribution from ⟨c†₁ c₂⟩.
+
+Only onsite and nearest-neighbor terms are included.
+"""
+function get_beta(ψ::InfiniteMPS,symm::SymmetryConfig,ty::Float,tz::Float,Ep::Float)
+
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
-    @assert ty == tz "We currently assumes ty == tz"
+    @assert ty == tz "We currently assume ty == tz"
     @assert Ep != 0  "Ep must be nonzero"
 
-    n = number_e(ps, ss)
+    n  = number_e(ps, ss)
     c0 = real(expectation_value(ψ, 1 => n))
-    c = c_plusmin(ps, ss)
+    c  = c_plusmin(ps, ss)
     c01 = real(expectation_value(ψ, (1,2) => c))
 
     b01 = 2 * 4 * tz^2 * c01 / Ep
@@ -228,6 +247,10 @@ function load_state(path::String)
 end
 
 compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0")
+
+"""
+Construct a canonical string tag from a hopping/interaction dictionary.
+"""
 
 function dict_tag(d::Dict; step::Float64 = 1e-4)
     pairs = sort(collect(d); by = first)

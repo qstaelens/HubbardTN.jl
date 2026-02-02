@@ -171,10 +171,12 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
     ops = (
         c⁺c      = c_plusmin(ps, ss; filling=fill),
         n_pair   = number_pair(ps, ss; filling=fill),
-        n        = number_e(ps, ss; filling=fill)
+        n        = number_e(ps, ss; filling=fill),
+        c⁺pair = create_pair_onesite(ps, ss; filling=fill),
+        cpair = delete_pair_onesite(ps, ss; filling=fill)
     )
     if ss !== SU2Irrep
-        ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+        ops = merge(ops, (Sz = Sz(ps, ss; filling=fill)))
     end
 
     phonon_space = []
@@ -184,11 +186,6 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
                           nb = number_b(ps, ss, max_b; filling=fill)))
 
         phonon_space = [boson_space(ps, ss, max_b; filling=fill)]
-    end
-
-    if ps === Trivial && ss === U1Irrep
-        ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss),
-                          cpair = delete_pair_onesite(ps, ss)))
     end
 
     electron_spaces = [electron_space for _ in 1:bands]

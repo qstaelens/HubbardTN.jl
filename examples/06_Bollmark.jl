@@ -13,27 +13,11 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 # Step 2: Set up model parameters
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [-10.0]        # [on-site interaction, nn_interaction, ...]
-svalue = 3.5
+svalue = 3.0
 
 model = HubbardParams(t, U)
 calc = CalcConfig(symm, model)
-
-path = "data/"
-filename = "06__$(t)_$(U)_s=$(svalue)"
-file_path = joinpath(path, filename * ".jld2")
-
-gs = if isfile(file_path)
-    println("Loading existing computation:")
-    println(file_path)
-    load_computation(file_path)
-else
-    println("Computing and saving:")
-    println(file_path)
-    gs = compute_groundstate(calc; svalue=svalue)
-    save_computation(gs, path, filename)
-    gs
-end
-
+gs = compute_groundstate(calc; svalue=svalue)
 ψ = gs["groundstate"]
 H = gs["ham"]
 
@@ -48,10 +32,10 @@ Ne = density_e(ψ, calc)
 println("Number of electrons per site: ", Ne)
 
 momenta = collect(range(0, π, length = 5))
-#band_gap, band_k = compute_bandgap(gs, momenta)
+
 spin_gap, spin_k = compute_spingap(gs, momenta)
 pairing_gap, pairing_k = compute_pairing_energy(gs, momenta)
-#println("\nBand gap at k = $(band_k): Δb = $(band_gap)")
+
 println("Spin gap   at k = $(spin_k): Δs = $(spin_gap)")
 println("Pairing gap   at k = $(pairing_k): Δp = $(pairing_gap)")
 
@@ -70,13 +54,13 @@ alpha_list = Vector{Vector{Float64}}()
 beta_list = Vector{Vector{Float64}}()
 E_list     = Float64[]
 
-for i in 1:10
+for i in 1:5
     global alpha, beta
     println("Step $i: alpha = $alpha, beta = $beta")
     calc = CalcConfig(symm, model, Bollmark(alpha, beta))
 
     # Step 3: Compute the ground state
-    gs = compute_groundstate(calc; svalue=3.0)
+    gs = compute_groundstate(calc; svalue=svalue)
     ψ = gs["groundstate"]
     H = gs["ham"]
 
