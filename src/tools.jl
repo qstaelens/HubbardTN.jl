@@ -251,7 +251,6 @@ compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0
 """
 Construct a canonical string tag from a hopping/interaction dictionary.
 """
-
 function dict_tag(d::Dict; step::Float64 = 1e-4)
     pairs = sort(collect(d); by = first)
     parts = String[]

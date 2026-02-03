@@ -2,7 +2,7 @@ using HubbardTN
 using TensorKit, MPSKit
 using Revise
 
-# Step 1: Define the symmetries
+# Step 0: Simple Hubbard model
 particle_symmetry = U1Irrep
 spin_symmetry = U1Irrep
 cell_width = 2
@@ -10,7 +10,6 @@ filling = (1, 1)
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 
-# Step 2: Set up model parameters
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [-10.0]        # [on-site interaction, nn_interaction, ...]
 svalue = 3.0
