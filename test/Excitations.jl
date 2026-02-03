@@ -9,7 +9,7 @@ tol = 1e-2
 # Parameters
 t = [0.0, 1.0];
 u = [5.0];
-filling = (2,3);
+filling = 2//3;
 
 
 ##########
@@ -17,7 +17,7 @@ filling = (2,3);
 ##########
 
 @testset "U1xSU2" begin
-    symm = SymmetryConfig(U1Irrep, SU2Irrep, filling[2], filling)
+    symm = SymmetryConfig(U1Irrep, SU2Irrep, denominator(filling), filling)
     model = HubbardParams(t, u)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
@@ -41,7 +41,7 @@ end
 ###########
 
 @testset "U1xTriv" begin
-    symm = SymmetryConfig(U1Irrep, Trivial, filling[2], filling)
+    symm = SymmetryConfig(U1Irrep, Trivial, denominator(filling), filling)
     model = HubbardParams(t, u)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
@@ -63,7 +63,7 @@ end
 t = [first(u)/2, 1.0];
 
 @testset "TrivxU1" begin
-    symm = SymmetryConfig(Trivial, U1Irrep, filling[2])
+    symm = SymmetryConfig(Trivial, U1Irrep, denominator(filling))
     model = HubbardParams(t, u)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)

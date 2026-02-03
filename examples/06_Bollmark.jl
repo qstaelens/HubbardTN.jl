@@ -6,35 +6,31 @@ using Revise
 particle_symmetry = U1Irrep
 spin_symmetry = U1Irrep
 cell_width = 2
-filling = (1, 1)
+filling = 1//1
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 
 t = [0.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [-10.0]        # [on-site interaction, nn_interaction, ...]
-svalue = 3.0
+svalue = 2.5
 
 model = HubbardParams(t, U)
-calc = CalcConfig(symm, model)
-gs = compute_groundstate(calc; svalue=svalue)
-ψ = gs["groundstate"]
-H = gs["ham"]
+calc0 = CalcConfig(symm, model)
+gs0 = compute_groundstate(calc0; svalue=svalue)
+ψ0 = gs0["groundstate"]
+H0 = gs0["ham"]
 
-E0 = expectation_value(ψ, H)
-E = sum(real(E0)) / length(H)
-println("Groundstate energy: ", E)
+E0 = sum(real(expectation_value(ψ0, H0))) / length(H0)
+println("Groundstate energy: ", E0)
 
-dim = dim_state(ψ)
-println("Max bond dimension: ", maximum(dim))
+dim0 = dim_state(ψ0)
+println("Max bond dimension: ", maximum(dim0))
 
-Ne = density_e(ψ, calc)
-println("Number of electrons per site: ", Ne)
+Ne0 = density_e(ψ0, calc0)
+println("Number of electrons per site: ", Ne0)
 
-momenta = collect(range(0, π, length = 5))
-
-spin_gap, spin_k = compute_spingap(gs, momenta)
-pairing_gap, pairing_k = compute_pairing_energy(gs, momenta)
-
+spin_gap, spin_k = compute_spingap(gs0, symm)
+pairing_gap, pairing_k = compute_pairing_energy(gs0, symm)
 println("Spin gap   at k = $(spin_k): Δs = $(spin_gap)")
 println("Pairing gap   at k = $(pairing_k): Δp = $(pairing_gap)")
 
@@ -50,7 +46,7 @@ beta = [0.0,0.0]
 model = HubbardParams(t, U)
 
 alpha_list = Vector{Vector{Float64}}()
-beta_list = Vector{Vector{Float64}}()
+beta_list  = Vector{Vector{Float64}}()
 E_list     = Float64[]
 
 for i in 1:5
@@ -63,8 +59,7 @@ for i in 1:5
     ψ = gs["groundstate"]
     H = gs["ham"]
 
-    E0 = expectation_value(ψ, H)
-    E = sum(real(E0)) / length(H)
+    E = sum(real(expectation_value(ψ, H))) / length(H)
 
     dim = dim_state(ψ)
     println("Max bond dimension: ", maximum(dim))

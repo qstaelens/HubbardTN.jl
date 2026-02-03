@@ -14,7 +14,7 @@ tol = 1e-2
 E_norm = -0.32384
 
 @testset "Three-body interaction terms" begin
-    symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (1,1))
+    symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, 1//1)
     t = [0.0, 1.0]
     U = [6.0]
     V = [2.0]

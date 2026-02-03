@@ -356,13 +356,12 @@ function hamiltonian_term(
         (electron_sites[n], electron_sites[n+1]) => -a01*hopping_pair
         for n in 1:(length(electron_sites)-1)
     ])
-    #h = append!(h, [(i,) => b0 * ops.n for i in electron_sites])  #This chemical potential renormalization would change the density in our system, Bollmark et al., Phys. Rev. X 13, 011039 (2023) also neglect this term.
     h = append!(h, [
-        (electron_sites[n], electron_sites[n+1]) => b01 * ops.c⁺c
+        (electron_sites[n], electron_sites[n+1]) => b01*ops.c⁺c
         for n in 1:(length(electron_sites)-1)
     ])
     h = append!(h, [
-        (electron_sites[n+1], electron_sites[n]) => b01 * ops.c⁺c
+        (electron_sites[n+1], electron_sites[n]) => b01*ops.c⁺c
         for n in 1:(length(electron_sites)-1)
     ])
 
