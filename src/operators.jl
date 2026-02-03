@@ -463,7 +463,7 @@ end
 function create_pair_onesite(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     t = single_site_operator(T, Trivial, SU2Irrep)
     I = sectortype(t)
-    t[(I(0, 0), dual(I(0, 0)))][2, 1] = 1
+    block(t, I(0, 0))[2, 1] = 1
     return t
 end
 function create_pair_onesite(T, ::Type{Trivial}, ::Type{Trivial}; kwargs...)
@@ -489,7 +489,7 @@ end
 function delete_pair_onesite(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     t = single_site_operator(T, Trivial, SU2Irrep)
     I = sectortype(t)
-    t[(I(0, 0), dual(I(0, 0)))][1, 2] = 1
+    block(t, I(0, 0))[1,2] = 1
     return t
 end
 function delete_pair_onesite(T, ::Type{Trivial}, ::Type{Trivial}; kwargs...)
