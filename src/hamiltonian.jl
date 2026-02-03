@@ -175,6 +175,8 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
     )
     if ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
+    end
+    if ps === Trivial
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
     end
 
