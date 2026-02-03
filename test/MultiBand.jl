@@ -25,7 +25,7 @@ end
 # Hamiltonian terms #
 #####################
 
-symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (2,2))
+symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, 2//2)
 
 t = [0.0 1.0 0.0 0.0; 1.0 0.0 0.5 0.0]
 U =Dict((1,1,1,1)=>4.0,  # Direct on-site

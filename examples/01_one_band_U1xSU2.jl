@@ -6,7 +6,7 @@ using Revise
 particle_symmetry = U1Irrep
 spin_symmetry = SU2Irrep
 cell_width = 2
-filling = (1, 1)
+filling = 1//1
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 

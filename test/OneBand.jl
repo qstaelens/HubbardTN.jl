@@ -18,7 +18,7 @@ E_norm = [-1.26967, -1.03717, -0.84145, -0.68707, -0.57119]
 
 @testset "Dependence on parameters U1xSU2" for u in u_range
     ind = Int(u) + 1
-    symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, (1,1))
+    symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, 1//1)
     model = HubbardParams([0.0, 1.0], [u])
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
@@ -52,14 +52,13 @@ end
 
 t = [0.0, 1.0];
 u = [5.0];
-P = [1, 1, 3];
-Q = [2, 1, 2];
-E = zeros(length(P),1);
+f = [1//2, 1//1, 3//2];
+E = zeros(length(f),1);
 
 E_norm = [-0.73923, -0.48432, 1.76080]
 
-@testset "Dependence on filling" for i in eachindex(P)
-    symm = SymmetryConfig(U1Irrep, U1Irrep, 2*Q[i], (P[i],Q[i]))
+@testset "Dependence on filling" for i in eachindex(f)
+    symm = SymmetryConfig(U1Irrep, U1Irrep, 2*denominator(f[i]), f[i])
     model = HubbardParams(t, u)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
@@ -75,7 +74,7 @@ end
 # EXCITATIONS #
 ###############
 
-symm = SymmetryConfig(U1Irrep, Trivial, 2, (1,1))
+symm = SymmetryConfig(U1Irrep, Trivial, 2, 1//1)
 model = HubbardParams([0.0, 1.0], [5.0])
 calc = CalcConfig(symm, model)
 
@@ -106,10 +105,10 @@ end
     @test D > zeros(size(D))
 
     electron_number = sum(density_e(psi, calc))/length(psi)
-    @test sum(electron_number)≈symm.filling[1]/symm.filling[2] atol=1e-8
+    @test sum(electron_number)≈(numerator(symm.filling)/denominator(symm.filling)) atol=1e-8
 
     Nup, Ndown = density_spin(psi, calc)
-    @test sum(Nup+Ndown)/length(psi)≈symm.filling[1]/symm.filling[2] atol=1e-8
+    @test sum(Nup+Ndown)/length(psi)≈(numerator(symm.filling)/denominator(symm.filling)) atol=1e-8
 
     ms = calc_ms(psi, calc)
     @test typeof(ms) == Float64

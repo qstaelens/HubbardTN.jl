@@ -18,7 +18,7 @@ using TensorKit, MPSKit
 particle_symmetry = U1Irrep
 spin_symmetry = U1Irrep
 cell_width = 2
-filling = (1, 1)
+filling = 1//1
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 
@@ -47,7 +47,7 @@ ex = compute_excitations(gs, momenta, charges)
 - The `SymmetryConfig` object defines all symmetry information of the model:
   - The **particle** and **spin** symmetries (`Trivial`, `U1Irrep`, or `SU2Irrep`)
   - The **number of sites in the unit cell** (`cell_width`)
-  - The **filling fraction**, defined by `N_electrons / N_sites` via the keyword `filling=(N_electrons, N_sites)`
+  - The **filling fraction**, defined by `N_electrons / N_sites` via the keyword `filling = N_electrons//N_sites`
 - The `HubbardParams` constructor shown above is the simplest form, suitable for single-band Hubbard models.
 
 ---
@@ -64,7 +64,7 @@ using TensorKit, MPSKit
 particle_symmetry = U1Irrep
 spin_symmetry = SU2Irrep
 cell_width = 2
-filling = (1, 1)
+filling = 1//1
 
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 

@@ -110,10 +110,11 @@ particle–removal excitations over a uniform momentum grid.
 """
 function compute_bandgap(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
     @assert symm.particle_symmetry==U1Irrep "Particle symmetry must be of type U1Irrep."
+    d = denominator(symm.filling)
     if symm.spin_symmetry==Trivial
-        charges_particle = [1, symm.filling[2]]
+        charges_particle = [1, d]
     else
-        charges_particle = [1, symm.filling[2], 1/2]
+        charges_particle = [1, d, 1/2]
     end
     charges_hole = copy(charges_particle)
     charges_hole[2] *= -1
@@ -187,12 +188,13 @@ excitations on a uniform momentum grid.
 
 function compute_pairing_energy(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
     @assert symm.particle_symmetry==U1Irrep "Particle symmetry must be of type U1Irrep."
+    d = denominator(symm.filling)
     if symm.spin_symmetry==Trivial
-        charges_particle = [1, symm.filling[2]]
-        charges_double = [0, 2*symm.filling[2]]
+        charges_particle = [1, d]
+        charges_double = [0, 2*d]
     else
-        charges_particle = [1, symm.filling[2], 1/2]
-        charges_double = [0, 2*symm.filling[2], 0]
+        charges_particle = [1, d, 1/2]
+        charges_double = [0, 2*d, 0]
     end
 
     momenta = collect(range(0, π, resolution))

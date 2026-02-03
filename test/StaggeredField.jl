@@ -10,7 +10,7 @@ tol = 2e-1
 particle_symmetry = U1Irrep
 spin_symmetry = U1Irrep
 cell_width = 2
-filling = (1, 1)
+filling = 1//1
 symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width, filling)
 
 # Model parameters (used inside the loop)
