@@ -97,12 +97,70 @@ Compute the staggered magnetization in an InfiniteMPS.
 """
 function calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
     up, down = density_spin(ψ, calc)
-    Mag = up - down
+    Mag = (up - down)/2
     if !all(x -> isapprox(abs(x),abs(Mag[1,1]),rtol=10^(-6)), vec(Mag))
         @warn "Staggerd magnetization varies across unit cell: returning value for first site only."
     end
     return abs(Mag[1,1])
 end
+
+
+"""
+Compute α-coefficients from pair correlators.
+
+Returns `[a0, a01]`, where:
+- `a0`  is the onsite contribution from ⟨c↓ c↑⟩,
+- `a01` is the nearest-neighbor contribution from ⟨c↑₁ c↓₂⟩.
+
+Only onsite and nearest-neighbor terms are included.
+"""
+function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+
+    ps   = symm.particle_symmetry
+    ss   = symm.spin_symmetry
+
+    @assert ty == tz "We currently assume ty == tz"
+    @assert Ep != 0  "Ep must be nonzero"
+
+    # onsite pair annihilation Δ = c↓ c↑
+    Δ  = delete_pair_onesite(ps, ss)
+    c0 = real(expectation_value(ψ, 1 => Δ))
+    c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+
+    a01 = 2 * 4 * tz^2 * c01 / Ep
+    a0  = 2 * 4 * tz^2 * c0  / Ep
+
+    return [a0, a01]
+end
+
+"""
+Compute β-coefficients from density and hopping correlators.
+
+Returns `[b0, b01]`, where:
+- `b0`  is the onsite contribution from ⟨n⟩,
+- `b01` is the nearest-neighbor contribution from ⟨c†₁ c₂⟩.
+
+Only onsite and nearest-neighbor terms are included.
+"""
+function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+
+    ps   = symm.particle_symmetry
+    ss   = symm.spin_symmetry
+
+    @assert ty == tz "We currently assume ty == tz"
+    @assert Ep != 0  "Ep must be nonzero"
+
+    n  = number_e(ps, ss)
+    c0 = real(expectation_value(ψ, 1 => n))
+    c  = c_plusmin(ps, ss)
+    c01 = real(expectation_value(ψ, (1,2) => c))
+
+    b01 = 2 * 4 * tz^2 * c01 / Ep
+    b0  = 2 * 4 * tz^2 * c0  / Ep
+
+    return [b0, b01]
+end
+
 
 
 ##########
@@ -186,4 +244,45 @@ function load_state(path::String)
     end
 
     return InfiniteMPS(PeriodicArray(A))
+end
+
+compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0")
+
+"""
+Construct a canonical string tag from a hopping/interaction dictionary.
+"""
+
+function dict_tag(d::Dict; step::Float64 = 1e-4)
+    pairs = sort(collect(d); by = first)
+    parts = String[]
+
+    for (k, v) in pairs
+        (v isa AbstractFloat && iszero(v)) && continue
+        if k isa Tuple && length(k) == 2
+            # hopping: t_ij, keep i<j
+            i, j = k
+            i > j && continue
+            push!(parts, "t$(i)$(j)_" * compact_float(v))
+
+        elseif k isa Tuple && length(k) == 4
+            # interaction: U_ijkl, canonicalize symmetry
+            i, j, l, m = k
+
+            if (i, j, l, m) > (j, i, m, l)
+                i, j, l, m = j, i, m, l
+            end
+
+            if (i, j) > (l, m)
+                i, j, l, m = l, m, i, j
+            end
+
+            push!(parts, "U$(i)$(j)$(l)$(m)_" * compact_float(v))
+
+        else
+            error("Unsupported key in dict_tag: $k")
+        end
+    end
+
+    unique!(parts)
+    return isempty(parts) ? "0" : join(parts, "_")
 end

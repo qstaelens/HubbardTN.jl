@@ -446,3 +446,55 @@ Sz(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = Sz(ComplexF64, P, S; kwarg
 function Sz(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
     return 0.5 * (number_up(T, particle_symmetry, spin_symmetry; kwargs...) - number_down(T, particle_symmetry, spin_symmetry; kwargs...))
 end
+
+"""
+    create_pair_onesite(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+
+Return the one-body onsite pair creation operator Δ† = c†_↑ c†_↓.
+It maps the empty state |0⟩ to the doubly occupied state |↑↓⟩.
+"""
+create_pair_onesite(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = create_pair_onesite(ComplexF64, P, S; kwargs...)
+function create_pair_onesite(T, ::Type{Trivial}, ::Type{U1Irrep}; kwargs...)
+    t = single_site_operator(T, Trivial, U1Irrep)
+    I = sectortype(t)
+    t[(I(0, 0), dual(I(0, 0)))][2, 1] = 1
+    return t
+end
+function create_pair_onesite(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
+    t = single_site_operator(T, Trivial, SU2Irrep)
+    I = sectortype(t)
+    block(t, I(0, 0))[2, 1] = 1
+    return t
+end
+function create_pair_onesite(T, ::Type{Trivial}, ::Type{Trivial}; kwargs...)
+    t = single_site_operator(T, Trivial, Trivial)
+    I = sectortype(t)
+    t[(I(0), dual(I(0)))][2, 1] = 1
+    return t
+end
+
+"""
+    delete_pair_onesite(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+
+Return the one-body onsite pair annihilation operator Δ = c_↓ c_↑.
+It maps the doubly occupied state |↑↓⟩ to the empty state |0⟩.
+"""
+delete_pair_onesite(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = delete_pair_onesite(ComplexF64, P, S; kwargs...)
+function delete_pair_onesite(T, ::Type{Trivial}, ::Type{U1Irrep}; kwargs...)
+    t = single_site_operator(T, Trivial, U1Irrep)
+    I = sectortype(t)
+    t[(I(0, 0), dual(I(0, 0)))][1, 2] = 1
+    return t
+end
+function delete_pair_onesite(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
+    t = single_site_operator(T, Trivial, SU2Irrep)
+    I = sectortype(t)
+    block(t, I(0, 0))[1,2] = 1
+    return t
+end
+function delete_pair_onesite(T, ::Type{Trivial}, ::Type{Trivial}; kwargs...)
+    t = single_site_operator(T, Trivial, Trivial)
+    I = sectortype(t)
+    t[(I(0), dual(I(0)))][1, 2] = 1
+    return t
+end
