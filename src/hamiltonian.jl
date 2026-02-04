@@ -180,7 +180,7 @@ function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
     end
 
-    phonon_space = []
+    phonon_spaces = []
     if max_b > 0
         ops = merge(ops, (bmin = b_min(ps, ss, max_b; filling=fill),
                           bplus = b_plus(ps, ss, max_b; filling=fill),
