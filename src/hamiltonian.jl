@@ -216,7 +216,7 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
     boson_site = Int(max_b>0)
-    w = (idx === nothing ? T[] : calc.terms[idx].w)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
     boson_site = boson_site*length(w)
     period = bands + boson_site
 
@@ -321,7 +321,7 @@ function hamiltonian_term(
 
     period = bands + boson_site
 
-    electron_sites = [ i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands) ]
+    electron_sites = [ i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands)]
     println(electron_sites)
 
     phonon_sites_by_mode = [Int64[] for _ in 1:length(w)]

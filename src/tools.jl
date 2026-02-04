@@ -28,7 +28,7 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     boson_site = (idx === nothing ? 0 : 1)
-    w = (idx === nothing ? T[] : calc.terms[idx].w)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
 
     Ne = zeros(bands, symm.cell_width)
     for i in 1:bands
