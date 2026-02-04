@@ -50,7 +50,7 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
     symm = calc.symmetries
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
-    w = (idx === nothing ? T[] : calc.terms[idx].w)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
 
     n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
     bands = calc.hubbard.bands
@@ -80,7 +80,7 @@ function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     boson_site = (idx === nothing ? 0 : 1)
-    w = (idx === nothing ? T[] : calc.terms[idx].w)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
     
     Nup = zeros(bands,symm.cell_width);
     Ndown = zeros(bands,symm.cell_width);
