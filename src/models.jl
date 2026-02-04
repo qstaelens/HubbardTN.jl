@@ -274,7 +274,7 @@ Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and
 # Fields
 - `w::Vector{T}`  
     Local phonon frequency.
-- `g::Vector{T}`  
+- `g::Matrix{T}`  
     Electron–phonon coupling strength per phonon.
 - `max_b::Int64`  
     Maximum number of phonons allowed per site.

@@ -10,8 +10,8 @@ E_ref = -1.2713317702997016
 
 @testset "Hubbard–Holstein: g = 0, ω₀ > 0" begin
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
-    w = 1.0
-    g = [0.0]
+    w = [1.0]
+    g = [0.0;;]
     max_b = 4
 
     model = HubbardParams([2.0, 1.0], [4.0])
@@ -36,8 +36,8 @@ E_ref = -3.2705801927593416
 
 @testset "Hubbard–Holstein: g = 0, ω₀ < 0" begin
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
-    w = -1.0
-    g = [0.0]
+    w = [-1.0]
+    g = [0.0;;]
     max_b = 4
 
     model = HubbardParams([2.0, 1.0], [4.0])
@@ -64,8 +64,8 @@ E_ref = -2.038990604938512
 
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    w = 1.0
-    g = [2.0]
+    w = [1.0]
+    g = [2.0;;]
     max_b = 10
 
     model = HubbardParams([2.0, 1.0], [4.0])

@@ -322,13 +322,13 @@ function hamiltonian_term(
 
     period = bands + boson_site
 
-    electron_sites = [i for i in 1:cell_width*period if i%period == 1]
+    electron_sites = [ i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands) ]
+    println(electron_sites)
 
     phonon_sites_by_mode = [Int64[] for _ in 1:length(w)]
     for c in 0:(cell_width-1)
-        base = c * period
         for m in 1:length(w)
-            i  = base + bands + m
+            i  = c * period + bands + m
             append!(phonon_sites_by_mode[m], i)
         end
     end

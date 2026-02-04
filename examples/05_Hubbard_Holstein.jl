@@ -13,7 +13,7 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
 w = [1.0,1.0]
-g = [0.5 0.5;]    #g = [1.0 1.0;]  #g = [1.0;;]
+g = [0.6 0.6;]    #g = [1.0 1.0;]  #g = [1.0;;]
 max_b = 4
 svalue = 3.0
 
