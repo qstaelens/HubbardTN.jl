@@ -161,7 +161,7 @@ end
 ############################
 
 # Build the symmetry-dependent operators
-function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
+function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int64)
     ps = symm.particle_symmetry
     ss = symm.spin_symmetry
     fill = symm.filling
@@ -186,11 +186,12 @@ function build_ops(symm::SymmetryConfig, bands, max_b::Int64)
                           bplus = b_plus(ps, ss, max_b; filling=fill),
                           nb = number_b(ps, ss, max_b; filling=fill)))
 
-        phonon_space = [boson_space(ps, ss, max_b; filling=fill)]
+        phonon_space = boson_space(ps, ss, max_b; filling=fill)
+        phonon_spaces = [phonon_space for _ in 1:nmodes]
     end
 
     electron_spaces = [electron_space for _ in 1:bands]
-    spaces = append!(electron_spaces, phonon_space)
+    spaces = append!(electron_spaces, phonon_spaces)
 
     return ops, repeat(spaces, symm.cell_width)
 end
@@ -215,12 +216,15 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
     boson_site = Int(max_b>0)
+    w = (idx === nothing ? T[] : calc.terms[idx].w)
+    g = (idx === nothing ? T[] : calc.terms[idx].g)
+    @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
+    boson_site = boson_site*length(w)
+    period = bands + boson_site
 
     symm = calc.symmetries
-    ops, spaces = build_ops(symm, bands, max_b)
+    ops, spaces = build_ops(symm, bands, max_b, length(w))
     cell_width = symm.cell_width
-
-    period = bands + boson_site
 
     h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(1,) => 0*ops.n]  # Initialize MPO
 
@@ -318,17 +322,34 @@ function hamiltonian_term(
 
     period = bands + boson_site
 
-    electron_sites = [i for i in 1:cell_width*period if i%period != 0]
-    phonon_sites = [i for i in 1:cell_width*period if i%period == 0]
+    electron_sites = [i for i in 1:cell_width*period if i%period == 1]
 
-    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w*ops.nb for i in phonon_sites]
+    phonon_sites_by_mode = [Int64[] for _ in 1:length(w)]
+    for c in 0:(cell_width-1)
+        base = c * period
+        for m in 1:length(w)
+            i  = base + bands + m
+            append!(phonon_sites_by_mode[m], i)
+        end
+    end
+    println(phonon_sites_by_mode)
 
-    return append!(h, [
-                        (i,j) => g[mod1(i, period)] * (ops.n - mean_ne*id(domain(ops.n)))⊗(ops.bmin + ops.bplus) 
-                        for i in electron_sites 
-                        for j in phonon_sites
-                        if j-period < i < j
-                    ])
+    # onsite phonon terms: ω_m * nb on each phonon site of mode m
+    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = vcat([
+        [(j,) => w[m] * ops.nb for j in phonon_sites_by_mode[m]]
+        for m in 1:length(w)
+    ]...)
+
+    # coupling terms: g_m couples electrons to phonons of mode m in the same cell
+    return append!(h, vcat([
+        [
+            (i,j) => g[m] * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus)
+            for i in electron_sites
+            for j in phonon_sites_by_mode[m]
+            if j - period < i < j
+        ]
+        for m in 1:length(w)
+    ]...))
 end
 # Bollmark term
 function hamiltonian_term(

@@ -28,11 +28,12 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     boson_site = (idx === nothing ? 0 : 1)
+    w = (idx === nothing ? T[] : calc.terms[idx].w)
 
     Ne = zeros(bands, symm.cell_width)
     for i in 1:bands
         for j in 1:symm.cell_width
-            site = i+(j-1)*(bands+boson_site)
+            site = i+(j-1)*(bands+boson_site*length(w))
             Ne[i,j] = real(expectation_value(ψ, site => n))
         end
     end
@@ -49,13 +50,16 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
     symm = calc.symmetries
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
+    w = (idx === nothing ? T[] : calc.terms[idx].w)
 
     n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
     bands = calc.hubbard.bands
 
-    Nb = zeros(1, symm.cell_width)
-    for j in 1:symm.cell_width
-        Nb[1,j] = real(expectation_value(ψ, (j-1)*(bands+1) => n))
+    Nb = zeros(length(w), symm.cell_width)
+    for i in 1:length(w)
+        for j in 1:symm.cell_width
+            Nb[i,j] = real(expectation_value(ψ, (j-1)*(bands+i) => n))
+        end
     end
     
     return Nb
@@ -76,12 +80,13 @@ function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     boson_site = (idx === nothing ? 0 : 1)
+    w = (idx === nothing ? T[] : calc.terms[idx].w)
     
     Nup = zeros(bands,symm.cell_width);
     Ndown = zeros(bands,symm.cell_width);
     for i in 1:bands
         for j in 1:symm.cell_width
-            site = i+(j-1)*(bands+boson_site)
+            site = i+(j-1)*(bands+boson_site*length(w))
             Nup[i,j] = real(expectation_value(ψ, site => n_up))
             Ndown[i,j] = real(expectation_value(ψ, site => n_down))
         end
