@@ -59,7 +59,7 @@ function initialize_mps(H::InfiniteMPOHamiltonian, symm::SymmetryConfig; max_dim
     V = TensorKit.infimum.(V_left, V_right)
 
     # Construct maximal symmetry-allowed virtual space
-    P = symm.filling === nothing ? 1 : symm.filling[1]
+    P = symm.filling === nothing ? 1 : numerator(symm.filling)
     Vmax = maximal_virtualspace(symm.particle_symmetry, symm.spin_symmetry, length(Ps), max_dimension, P)
 
     V_trunc = TensorKit.infimum.(V, fill(Vmax, length(V)))
@@ -121,17 +121,17 @@ function compute_groundstate(
 
     schmidtcut = 10.0^(-svalue)
     tol = max(tol, schmidtcut/10)
-    
+    #truncbelow(schmidtcut)
     if total_width > 1
-        ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=truncbelow(schmidtcut), tol=tol, verbosity=verbosity))
+        ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))
     else
         ψ₀, envs, = find_groundstate(ψ₀, H, VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity))
-        ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=truncbelow(schmidtcut)))
+        ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=trunctol(; atol=schmidtcut)))
         χ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
         for i in 1:maxiter
-            ψ₀, envs = changebonds(ψ₀, H, VUMPSSvdCut(;trscheme=truncbelow(schmidtcut)))
+            ψ₀, envs = changebonds(ψ₀, H, VUMPSSvdCut(; trscheme=trunctol(; atol=schmidtcut)))
             ψ₀, = find_groundstate(ψ₀, H, VUMPS(; tol=max(tol, schmidtcut / 10), verbosity=verbosity), envs)
-            ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=truncbelow(schmidtcut)))
+            ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=trunctol(; atol=schmidtcut)))
             χ′ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
             isapprox(χ, χ′; rtol=0.05) && break
             χ = χ′

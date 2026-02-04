@@ -3,12 +3,12 @@
 ##########
 
 """
-    hubbard_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64, Int64}=(1,1))
+    hubbard_space(particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Rational{Int}=1//1)
 
 Return the local hilbert space for a Hubbard-type model with the given particle and spin symmetries.
 The possible symmetries are `Trivial`, `U1Irrep`, and `SU2Irrep`, for both particle number and spin.
-When using `U1Irrep` particle symmetry, the filling can be adjusted to `P` particles per `Q` sites by
-passing the keyword `filling=(P,Q)`. The default is `(1,1)`, i.e., half-filling.
+When using `U1Irrep` particle symmetry, the filling can be specified as a rational `P//Q` (particles per sites).
+The default is `1//1` (half-filling).
 """
 function hubbard_space(::Type{Trivial} = Trivial, ::Type{Trivial} = Trivial; kwargs...)
     return Vect[FermionParity](0 => 2, 1 => 2)
@@ -19,19 +19,19 @@ end
 function hubbard_space(::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     return Vect[FermionParity ⊠ SU2Irrep]((0, 0) => 2, (1, 1 // 2) => 1)
 end
-function hubbard_space(::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
-    P, Q = filling
+function hubbard_space(::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
+    P = numerator(filling); Q = denominator(filling)
     return Vect[FermionParity ⊠ U1Irrep]((0, -P) => 1, (1, Q-P) => 2, (0, 2Q-P) => 1)
 end
-function hubbard_space(::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    P, Q = filling
+function hubbard_space(::Type{U1Irrep}, ::Type{U1Irrep}; filling::Rational{Int}=1//1)
+    P = numerator(filling); Q = denominator(filling)
     return Vect[FermionParity ⊠ U1Irrep ⊠ U1Irrep](
         (0, -P, 0) => 1, (1, Q-P, 1 // 2) => 1,
         (1, Q-P, -1 // 2) => 1, (0, 2Q-P, 0) => 1
     )
 end
-function hubbard_space(::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    P, Q = filling
+function hubbard_space(::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
+    P = numerator(filling); Q = denominator(filling)
     return Vect[FermionParity ⊠ U1Irrep ⊠ SU2Irrep](
         (0, -P, 0) => 1, (1, Q-P, 1 // 2) => 1, (0, 2Q-P, 0) => 1
     )
@@ -52,14 +52,14 @@ end
 #############
 
 function single_site_operator(
-        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1)
+        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Rational{Int}=1//1
     )
     V = hubbard_space(particle_symmetry, spin_symmetry; filling=filling)
     return zeros(T, V ← V)
 end
 
 function two_site_operator(
-        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1)
+        T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Rational{Int}=1//1
     )
     V = hubbard_space(particle_symmetry, spin_symmetry; filling=filling)
     return zeros(T, V ⊗ V ← V ⊗ V)
@@ -99,9 +99,9 @@ end
 function c_plusmin_up(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
-function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
     t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     t[(I(1, Q-P), I(0, -P), dual(I(0, -P)), dual(I(1, Q-P)))][1, 1, 1, 1] = 1
     t[(I(1, Q-P), I(1, Q-P), dual(I(0, -P)), dual(I(0, 2Q-P)))][1, 2, 1, 1] = 1
@@ -109,9 +109,9 @@ function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,
     t[(I(0, 2Q-P), I(1, Q-P), dual(I(1, Q-P)), dual(I(0, 2Q-P)))][1, 2, 2, 1] = -1
     return t
 end
-function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Rational{Int}=1//1)
     t = two_site_operator(T, U1Irrep, U1Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     t[(I(1, Q-P, 1 // 2), I(0, -P, 0), dual(I(0, -P, 0)), dual(I(1, Q-P, 1 // 2)))] .= 1
     t[(I(1, Q-P, 1 // 2), I(1, Q-P, -1 // 2), dual(I(0, -P, 0)), dual(I(0, 2Q-P, 0)))] .= 1
@@ -119,7 +119,7 @@ function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,
     t[(I(0, 2Q-P, 0), I(1, Q-P, -1 // 2), dual(I(1, Q-P, -1 // 2)), dual(I(0, 2Q-P, 0)))] .= -1
     return t
 end
-function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_up(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_up(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
@@ -159,9 +159,9 @@ end
 function c_plusmin_down(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
-function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
     t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     t[(I(1, Q-P), I(0, -P), dual(I(0, -P)), dual(I(1, Q-P)))][2, 1, 1, 2] = 1
     t[(I(1, Q-P), I(1, Q-P), dual(I(0, -P)), dual(I(0, 2Q-P)))][2, 1, 1, 1] = -1
@@ -169,9 +169,9 @@ function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int6
     t[(I(0, 2Q-P), I(1, Q-P), dual(I(1, Q-P)), dual(I(0, 2Q-P)))][1, 1, 1, 1] = -1
     return t
 end
-function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Rational{Int}=1//1)
     t = two_site_operator(T, U1Irrep, U1Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     t[(I(1, Q-P, -1 // 2), I(0, -P, 0), dual(I(0, -P, 0)), dual(I(1, Q-P, -1 // 2)))] .= 1
     t[(I(1, Q-P, -1 // 2), I(1, Q-P, 1 // 2), dual(I(0, -P, 0)), dual(I(0, 2Q-P, 0)))] .= -1
@@ -179,7 +179,7 @@ function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int6
     t[(I(0, 2Q-P, 0), I(1, Q-P, 1 // 2), dual(I(1, Q-P, 1 // 2)), dual(I(0, 2Q-P, 0)))] .= -1
     return t
 end
-function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function c_plusmin_down(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     throw(ArgumentError("`c_plusmin_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function c_plusmin_down(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
@@ -244,8 +244,8 @@ function c_plusmin(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     t[f7, f8][1, 1, 2, 1] = sqrt(2)
     return t
 end
-function c_plusmin(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
-    P, Q = filling
+function c_plusmin(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
+    P = numerator(filling); Q = denominator(filling)
     t = two_site_operator(T, U1Irrep, SU2Irrep; filling=filling)
     I = sectortype(t)
 
@@ -277,7 +277,7 @@ Return the two-body operator that annihilates a particle at the first site and c
 This is the sum of `c_minplus_up` and `c_minplus_down`.
 """
 c_minplus(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_minplus(ComplexF64, P, S; kwargs...)
-function c_minplus(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Tuple{Int64,Int64}=(1,1))
+function c_minplus(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; filling::Rational{Int}=1//1)
     return copy(adjoint(c_plusmin(T, particle_symmetry, spin_symmetry; filling=filling)))
 end
 
@@ -304,23 +304,23 @@ end
 function number_up(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     throw(ArgumentError("`number_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
-function number_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
+function number_up(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, Trivial; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(1, Q-P))[1, 1] = 1
     block(t, I(0, 2Q-P))[1, 1] = 1
     return t
 end
-function number_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_up(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, U1Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(1, Q-P, 1 // 2)) .= 1
     block(t, I(0, 2Q-P, 0)) .= 1
     return t
 end
-function number_up(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_up(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     throw(ArgumentError("`number_up` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function number_up(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
@@ -356,23 +356,23 @@ end
 function number_down(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     throw(ArgumentError("`number_down` is not symmetric under `SU2Irrep` spin symmetry"))
 end
-function number_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Tuple{Int64,Int64}=(1,1))
+function number_down(T, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, Trivial; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(1, Q-P))[2, 2] = 1
     block(t, I(0, 2Q-P))[1, 1] = 1
     return t
 end
-function number_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_down(T, ::Type{U1Irrep}, ::Type{U1Irrep}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, U1Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(1, Q-P, -1 // 2)) .= 1
     block(t, I(0, 2Q-P, 0)) .= 1
     return t
 end
-function number_down(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_down(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     throw(ArgumentError("`number_down` is not symmetric under `SU2Irrep` spin symmetry"))
 end
 function number_down(T, ::Type{SU2Irrep}, ::Type{Trivial}; kwargs...)
@@ -402,9 +402,9 @@ function number_e(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     block(t, I(0, 0))[2, 2] = 2
     return t
 end
-function number_e(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_e(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, SU2Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(1, Q-P, 1 // 2)) .= 1
     block(t, I(0, 2Q-P, 0)) .= 2
@@ -429,9 +429,9 @@ function number_pair(T, ::Type{Trivial}, ::Type{SU2Irrep}; kwargs...)
     block(t, I(0, 0))[2, 2] = 1
     return t
 end
-function number_pair(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Tuple{Int64,Int64}=(1,1))
+function number_pair(T, ::Type{U1Irrep}, ::Type{SU2Irrep}; filling::Rational{Int}=1//1)
     t = single_site_operator(T, U1Irrep, SU2Irrep; filling=filling)
-    P, Q = filling
+    P = numerator(filling); Q = denominator(filling)
     I = sectortype(t)
     block(t, I(0, 2Q-P, 0)) .= 1
     return t

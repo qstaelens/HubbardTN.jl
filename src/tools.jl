@@ -111,6 +111,8 @@ end
 
 
 """
+    get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+
 Compute α-coefficients from pair correlators.
 
 Returns `[a0, a01]`, where:
@@ -120,7 +122,6 @@ Returns `[a0, a01]`, where:
 Only onsite and nearest-neighbor terms are included.
 """
 function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
-
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
@@ -139,6 +140,8 @@ function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) w
 end
 
 """
+    get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+
 Compute β-coefficients from density and hopping correlators.
 
 Returns `[b0, b01]`, where:
@@ -148,7 +151,6 @@ Returns `[b0, b01]`, where:
 Only onsite and nearest-neighbor terms are included.
 """
 function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
-
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
@@ -256,7 +258,6 @@ compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0
 """
 Construct a canonical string tag from a hopping/interaction dictionary.
 """
-
 function dict_tag(d::Dict; step::Float64 = 1e-4)
     pairs = sort(collect(d); by = first)
     parts = String[]

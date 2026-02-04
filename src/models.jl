@@ -15,37 +15,38 @@ unit cell width, and optional filling information.
     - The symmetry type for spin degrees of freedom.
 - `cell_width` : Int64
     - Number of sites in the unit cell. Must be a positive integer. Defaults to 1.
-- `filling` : Union{Nothing, Tuple{Int64, Int64}}
-    - Optional particle filling specified as a fraction `(numerator, denominator)`. Only allowed if `particle_symmetry` is `U1Irrep`. 
+- `filling` : Union{Nothing, Rational{Int}}
+    - Optional particle filling specified as a rational number `P//Q` (numerator/denominator). Only allowed if `particle_symmetry` is `U1Irrep`.
     Otherwise the filling is determined by the chemical potential.
 
 # Constructor Behavior
 - If `filling` is provided, the constructor checks that `particle_symmetry == U1Irrep`.
 - `cell_width` must be positive.
 - If `particle_symmetry` is `U1Irrep` and `filling` is specified, the constructor ensures that `cell_width` is a multiple of
-  `filling[2] * (mod(filling[1], 2) + 1)` to accommodate the specified filling.
+  `denominator(filling) * (mod(numerator(filling), 2) + 1)` to accommodate the specified filling.
 """
 struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
     spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
     cell_width::Int64
-    filling::Union{Nothing,Tuple{Int64,Int64}}
+    filling::Union{Nothing,Rational{Int}}
 
     function SymmetryConfig(
                 particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
                 spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
                 cell_width::Int64,
-                filling::Union{Nothing,Tuple{Int64,Int64}}=nothing
+                filling::Union{Nothing,Rational{Int}}=nothing
             )
         @assert cell_width > 0 "Cell width must be a positive integer"
 
         if particle_symmetry == U1Irrep
-            filling = filling === nothing ? (1, 1) : filling
-            numerator, denominator = filling
-            @assert numerator > 0 && denominator > 0 "Filling components must be positive integers"
-            necessary_width = denominator * (mod(numerator, 2) + 1)
+            filling = filling === nothing ? 1//1 : filling
+            n = numerator(filling)
+            d = denominator(filling)
+            @assert n > 0 && d > 0 "Filling numerator and denominator must be positive integers"
+            necessary_width = d * (mod(n, 2) + 1)
             @assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width 
-                                                       to accommodate the specified filling ($numerator / $denominator)"
+                                                       to accommodate the specified filling ($n / $d)"
         elseif filling !== nothing
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end

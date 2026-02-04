@@ -67,7 +67,7 @@ It then computes excitations between the two MPS states within the specified sym
 function compute_domainwall(
                     groundstate_dict::Dict{String,Any},
                     momenta::Union{Float64,Vector{Float64}},
-                    charges::Vector{Float64};
+                    charges::Union{Vector{Int64},Vector{Float64}};
                     nums::Int64=1,
                     shift::Int64=1,
                     solver=Arnoldi(;krylovdim=30,tol=1e-6,eager=true)
@@ -89,21 +89,40 @@ function compute_domainwall(
 end
 
 """
-    compute_bandgap(groundstate_dict, momenta; nums=1)
+    compute_bandgap(gs, symm; resolution=5)
 
-Compute the single-particle (charge) band gap from particle–addition and particle–removal excitations.
+Compute the single-particle (charge) band gap from particle–addition and
+particle–removal excitations over a uniform momentum grid.
 
 # Arguments
-- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`, containing the ground state, Hamiltonian, and environments.
-- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations are evaluated.
-- `nums::Int64=1`: Number of excitations computed per momentum in each sector.
+- `gs::Dict{String,Any}`: Ground-state data as produced by `compute_groundstate`,
+  containing the state, Hamiltonian, and environments.
+- `symm::SymmetryConfig`: Symmetry configuration. The particle symmetry must be
+  `U1Irrep`.
+
+# Keyword Arguments
+- `resolution::Int=5`: Number of momentum points in the uniform grid between
+  `0` and `π` (inclusive).
 
 # Returns
-- `(gap, kmin)`: The minimum value of `E_add(k) + E_remove(k)` and the corresponding momentum.
+- `(gap, kmin)`: The minimum value of `E_add(k) + E_remove(k)` over the sampled
+  momenta and the corresponding momentum `k`.
 """
-function compute_bandgap(gs, momenta; nums::Int64=1)
-    ex_add = compute_excitations(gs, momenta, [1,  1.0, 1//2]; nums=nums)
-    ex_rem = compute_excitations(gs, momenta, [1, -1.0, 1//2]; nums=nums)
+function compute_bandgap(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
+    @assert symm.particle_symmetry==U1Irrep "Particle symmetry must be of type U1Irrep."
+    d = denominator(symm.filling)
+    if symm.spin_symmetry==Trivial
+        charges_particle = [1, d]
+    else
+        charges_particle = [1, d, 1/2]
+    end
+    charges_hole = copy(charges_particle)
+    charges_hole[2] *= -1
+
+    momenta = collect(range(0, π, resolution))
+
+    ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
+    ex_rem = compute_excitations(gs, momenta, charges_hole; nums=1)
 
     Es = ex_add["Es"] .+ ex_rem["Es"]
     gap, k = findmin(real.(Es[:,1]))
@@ -111,45 +130,76 @@ function compute_bandgap(gs, momenta; nums::Int64=1)
 end
 
 """
-    compute_spingap(groundstate_dict, momenta; nums=1)
+    compute_spingap(gs, symm; resolution=5)
 
-Compute the spin gap from spin-flip excitations above the ground state.
+Compute the spin gap from spin-flip excitations above the ground state over a
+uniform momentum grid.
 
 # Arguments
-- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`, containing the ground state, Hamiltonian, and environments.
-- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations are evaluated.
-- `nums::Int64=1`: Number of excitations computed per momentum.
+- `gs::Dict{String,Any}`: Ground-state data as produced by `compute_groundstate`,
+  containing the state, Hamiltonian, and environments.
+- `symm::SymmetryConfig`: Symmetry configuration. The spin symmetry must not be
+  `Trivial`.
+
+# Keyword Arguments
+- `resolution::Int=5`: Number of momentum points in the uniform grid between
+  `0` and `π` (inclusive).
 
 # Returns
-- `(gap, kmin)`: The minimum excitation energy `E(k)` in the spin sector and the corresponding momentum.
+- `(gap, kmin)`: The minimum spin excitation energy over the sampled momenta
+  and the corresponding momentum `k`.
 """
-function compute_spingap(gs, momenta; nums::Int64=1)
-    ex = compute_excitations(gs, momenta, [0, 0.0, 1]; nums=nums)
+
+function compute_spingap(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
+    @assert symm.spin_symmetry!=Trivial "Spin symmetry must not be Trivial."
+    if symm.particle_symmetry==Trivial
+        charges = [0, 1]
+    else
+        charges = [0, 0, 1]
+    end
+
+    momenta = collect(range(0, π, resolution))
+    ex = compute_excitations(gs, momenta, charges; nums=1)
     Es = ex["Es"]
     gap, k = findmin(real.(Es[:,1]))
     return gap, momenta[k]
 end
 
 """
-    compute_pairing_energy(groundstate_dict, momenta; nums=1)
+    compute_pairing_energy(gs, symm; resolution=5)
 
-Compute the pairing energy from single-particle and double-particle
-addition excitations.
+Compute the pairing energy from single-particle and two-particle addition
+excitations on a uniform momentum grid.
 
 # Arguments
-- `groundstate_dict::Dict{String,Any}`: A dictionary produced by `compute_groundstate`,
-  containing the ground state, Hamiltonian, and environments.
-- `momenta::Union{Float64,Vector{Float64}}`: Momentum values at which the excitations
-  are evaluated.
-- `nums::Int64=1`: Number of excitations computed per momentum in each sector.
+- `gs::Dict{String,Any}`: Ground-state data as produced by `compute_groundstate`,
+  containing the state, Hamiltonian, and environments.
+- `symm::SymmetryConfig`: Symmetry configuration. The particle symmetry must be
+  `U1Irrep`.
+
+# Keyword Arguments
+- `resolution::Int=5`: Number of momentum points in the uniform grid between
+  `0` and `π` (inclusive).
 
 # Returns
-- `(gap, kmin)`: The minimum value of `2 * E_add(k) - E_double(k)` and the
-  corresponding momentum.
+- `(gap, kmin)`: The minimum value of `2E_add(k) - E_double(k)` over the sampled
+  momenta and the corresponding momentum `k`.
 """
-function compute_pairing_energy(gs, momenta; nums::Int64=1)
-    ex_add = compute_excitations(gs, momenta, [1,  1.0, 1//2]; nums=nums)
-    ex_double = compute_excitations(gs, momenta, [0, 2.0, 0]; nums=nums)
+
+function compute_pairing_energy(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
+    @assert symm.particle_symmetry==U1Irrep "Particle symmetry must be of type U1Irrep."
+    d = denominator(symm.filling)
+    if symm.spin_symmetry==Trivial
+        charges_particle = [1, d]
+        charges_double = [0, 2*d]
+    else
+        charges_particle = [1, d, 1/2]
+        charges_double = [0, 2*d, 0]
+    end
+
+    momenta = collect(range(0, π, resolution))
+    ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
+    ex_double = compute_excitations(gs, momenta, charges_double; nums=1)
 
     Es = 2*ex_add["Es"] .- ex_double["Es"]
     gap, k = findmin(real.(Es[:,1]))
