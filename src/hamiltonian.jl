@@ -321,8 +321,7 @@ function hamiltonian_term(
 
     period = bands + boson_site
 
-    electron_sites = [ i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands)]
-    println(electron_sites)
+    electron_sites = [i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands)]
 
     phonon_sites_by_mode = [Int64[] for _ in 1:length(w)]
     for c in 0:(cell_width-1)
@@ -331,7 +330,6 @@ function hamiltonian_term(
             append!(phonon_sites_by_mode[m], i)
         end
     end
-    println(phonon_sites_by_mode)
 
     # onsite phonon terms: ω_m * nb on each phonon site of mode m
     h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = vcat([
@@ -339,16 +337,21 @@ function hamiltonian_term(
         for m in 1:length(w)
     ]...)
 
-    # coupling terms: g_m couples electrons to phonons of mode m in the same cell
-    return append!(h, vcat([
-        [
-            (i,j) => g[m] * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus)
-            for i in electron_sites
-            for j in phonon_sites_by_mode[m]
-            if j - period < i < j
-        ]
-        for m in 1:length(w)
-    ]...))
+    # coupling terms: g[b,m] couples band b electrons to phonon mode m in the same cell
+    for m in 1:length(w)
+        for c in 0:(cell_width-1)
+            j = c * period + bands + m              
+            for b in 1:bands
+                i = c * period + b              
+                push!(h,
+                    (i, j) => g[b, m] *
+                            (ops.n - mean_ne*id(domain(ops.n))) ⊗
+                            (ops.bmin + ops.bplus))
+            end
+        end
+    end
+
+    return h
 end
 # Bollmark term
 function hamiltonian_term(

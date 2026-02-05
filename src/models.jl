@@ -287,7 +287,7 @@ Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
     w::Vector{T}                # Phonon frequency in term `w b⁺ᵢ bᵢ`
-    g::Matrix{T}                # Electron-phonon coupling strength per Hubbard band
+    g::Matrix{T}                # Electron-phonon coupling strength per Hubbard band and per phonon
     max_b::Int64                # Max allowed phonons per site
     mean_ne::T                  # Mean number of electrons in Hubbard model
 

@@ -12,32 +12,15 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 # Step 2: Set up model parameters
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
-w = [1.0,1.0]
-g = [0.6 0.6;]    #g = [1.0 1.0;]  #g = [1.0;;]
+w = [1.0]
+g = [1.0;;]
 max_b = 4
-svalue = 3.0
 
 model = HubbardParams(t, U)
 calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
-filename = "05__$(t)_$(U)_$(w)_$(g)_$(max_b)_s=$(svalue)"
-
-path = "data/"
-file_path = joinpath(path, filename * ".jld2")
-
-gs = if isfile(file_path)
-    println("Loading existing computation:")
-    println(file_path)
-    load_computation(file_path)
-else
-    # Step 3: Compute the ground state
-    println("Computing and saving:")
-    println(file_path)
-    gs = compute_groundstate(calc; svalue=svalue)
-    save_computation(gs, path, filename)
-    gs
-end
-
+# Step 3: Compute the ground state
+gs = compute_groundstate(calc; svalue = 3.0)
 ψ = gs["groundstate"]
 H = gs["ham"]
 
