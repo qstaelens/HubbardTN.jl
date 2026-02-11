@@ -215,9 +215,8 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
-    boson_site = Int(max_b>0)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_site = boson_site*length(w)
+    boson_site = Int(max_b>0)*length(w)
     period = bands + boson_site
 
     symm = calc.symmetries
@@ -316,7 +315,6 @@ function hamiltonian_term(
 
     w = term.w
     g = term.g
-    @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
     mean_ne = term.mean_ne
 
     period = bands + boson_site

@@ -293,6 +293,7 @@ struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
     function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
         @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
+        @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
         new{T}(w, g, max_b, mean_ne)
     end
 end
