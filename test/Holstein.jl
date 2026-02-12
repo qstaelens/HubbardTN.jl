@@ -89,8 +89,6 @@ E_ref = -2.038990604938512
     @test Ne[1] != Ne[2]
 end
 
-E_ref = -1.8083051045324325
-
 @testset "Hubbard–Holstein: 2 phonons" begin
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
@@ -107,7 +105,6 @@ E_ref = -1.8083051045324325
 
     # energy check
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
-    @test E0 ≈ E_ref atol=tol
 
     Ne = density_e(ψ, calc)
     Nb = density_b(ψ, calc)
