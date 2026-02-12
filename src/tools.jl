@@ -28,12 +28,12 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_site = (idx === nothing ? 0 : 1)*length(w)
+    boson_modes = (idx === nothing ? 0 : 1)*length(w)
 
     Ne = zeros(bands, symm.cell_width)
     for i in 1:bands
         for j in 1:symm.cell_width
-            site = i+(j-1)*(bands+boson_site)
+            site = i+(j-1)*(bands+boson_modes)
             Ne[i,j] = real(expectation_value(ψ, site => n))
         end
     end
@@ -80,13 +80,13 @@ function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_site = (idx === nothing ? 0 : 1) * length(w)
+    boson_modes = (idx === nothing ? 0 : 1) * length(w)
     
     Nup = zeros(bands,symm.cell_width);
     Ndown = zeros(bands,symm.cell_width);
     for i in 1:bands
         for j in 1:symm.cell_width
-            site = i+(j-1)*(bands+boson_site)
+            site = i+(j-1)*(bands+boson_modes)
             Nup[i,j] = real(expectation_value(ψ, site => n_up))
             Ndown[i,j] = real(expectation_value(ψ, site => n_down))
         end
