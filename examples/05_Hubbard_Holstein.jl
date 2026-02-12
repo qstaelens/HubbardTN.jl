@@ -12,8 +12,8 @@ symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
 # Step 2: Set up model parameters
 t = [2.0, 1.0]   # [chemical_potential, nn_hopping, nnn_hopping, ...]
 U = [4.0]        # [on-site interaction, nn_interaction, ...]
-w = 1.0
-g = [0.5]
+w = [1.0]
+g = [1.0;;]
 max_b = 4
 
 model = HubbardParams(t, U)

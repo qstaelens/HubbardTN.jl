@@ -272,10 +272,10 @@ end
 Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and`gₐ(nᵢₐ-<n>)(b⁺ᵢ + bᵢ)` in the Hamiltonian.
 
 # Fields
-- `w::T`  
+- `w::Vector{T}`  
     Local phonon frequency.
-- `g::Vector{T}`  
-    Electron–phonon coupling strength per Hubbard band.
+- `g::Matrix{T}`  
+    Electron–phonon coupling strength per phonon.
 - `max_b::Int64`  
     Maximum number of phonons allowed per site.
 - `mean_ne::T`  
@@ -286,13 +286,14 @@ Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and
   coupling, and phonon truncation.
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
-    w::T                        # Phonon frequency in term `w b⁺ᵢ bᵢ`
-    g::Vector{T}                # Electron-phonon coupling strength per Hubbard band
+    w::Vector{T}                # Phonon frequency in term `w b⁺ᵢ bᵢ`
+    g::Matrix{T}                # Electron-phonon coupling strength per Hubbard band and per phonon
     max_b::Int64                # Max allowed phonons per site
     mean_ne::T                  # Mean number of electrons in Hubbard model
 
-    function HolsteinTerm(w::T, g::Vector{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
+    function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
         @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
+        @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
         new{T}(w, g, max_b, mean_ne)
     end
 end
@@ -377,7 +378,7 @@ struct CalcConfig{
                 @assert term.bands == bands "Number of bands in HubbardParams does not match number of bands in $term"
             end
             if term isa HolsteinTerm
-                @assert length(term.g) == bands "Length of electron-phonon coupling vector does not match number of bands in HubbardParams"
+                @assert size(term.g,1) == bands "Length of electron-phonon coupling vector does not match number of bands in HubbardParams"
             end
         end
 
