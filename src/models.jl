@@ -277,7 +277,7 @@ Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and
 - `g::Matrix{T}`  
     Electron–phonon coupling strength per phonon.
 - `max_b::Int64`  
-    Maximum number of phonons allowed per site.
+    Maximum number of phonons allowed per mode.
 - `mean_ne::T`  
     Mean number of electrons in Hubbard model.
 
@@ -378,7 +378,7 @@ struct CalcConfig{
                 @assert term.bands == bands "Number of bands in HubbardParams does not match number of bands in $term"
             end
             if term isa HolsteinTerm
-                @assert size(term.g,1) == bands "Length of electron-phonon coupling vector does not match number of bands in HubbardParams"
+                @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
             end
         end
 

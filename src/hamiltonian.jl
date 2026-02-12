@@ -216,25 +216,25 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_site = Int(max_b>0)*length(w)
-    period = bands + boson_site
+    boson_modes = Int(max_b>0)*length(w)
+    period = bands + boson_modes
 
     symm = calc.symmetries
-    ops, spaces = build_ops(symm, bands, max_b, length(w))
+    ops, spaces = build_ops(symm, bands, max_b, boson_modes)
     cell_width = symm.cell_width
 
     h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(1,) => 0*ops.n]  # Initialize MPO
 
     # --- Hopping ---
     for cell in 0:(cell_width-1)
-        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        site(i) = i + cell*period + div(i-1, bands)*boson_modes
         h = append!(h, [site.((i,j)) => -t_ij*ops.c⁺c for ((i,j), t_ij) in t if i != j])
         h = append!(h, [(site(i),) => -μ_i*ops.n for ((i,j), μ_i) in t if i == j])
     end
 
     # --- 2-body Interaction ---
     for cell in 0:(cell_width-1)
-        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        site(i) = i + cell*period + div(i-1, bands)*boson_modes
         h = append!(h, [
             begin 
                 operator, indices = two_body_int_cached(ops, site.((i,j,k,l)))
@@ -245,7 +245,7 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
 
     # --- Extra terms ---
     for term in calc.terms
-        h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_site))
+        h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_modes))
     end
 
     return InfiniteMPOHamiltonian(spaces, h...)
@@ -257,15 +257,15 @@ function hamiltonian_term(
                     ops, 
                     cell_width::Int64,
                     bands::Int64,
-                    boson_site::Int64
+                    boson_modes::Int64
                 )
     V = term.V
-    period = bands + boson_site
+    period = bands + boson_modes
 
     h = []
 
     for cell in 0:(cell_width-1)
-        site(i) = i + cell*period + div(i-1, bands)*boson_site
+        site(i) = i + cell*period + div(i-1, bands)*boson_modes
         h = append!(h, [
             begin
                 operator, indices = three_body_int_cached(ops, site.((i,j,k,l,m,n)))
@@ -282,10 +282,10 @@ function hamiltonian_term(
                     ops, 
                     cell_width::Int64,
                     bands::Int64,
-                    boson_site::Int64
+                    boson_modes::Int64
                 )
     B = term.B
-    period = bands + boson_site
+    period = bands + boson_modes
 
     return [(i,) => -B*ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
 end
@@ -295,11 +295,11 @@ function hamiltonian_term(
                     ops, 
                     cell_width::Int64,
                     bands::Int64,
-                    boson_site::Int64
+                    boson_modes::Int64
                 )
     J = term.J
     Ms = term.Ms
-    period = bands + boson_site
+    period = bands + boson_modes
     phase = (-1) .^ (div.(0:(period*cell_width-1), period))
 
     return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
@@ -310,41 +310,32 @@ function hamiltonian_term(
                     ops, 
                     cell_width::Int64,
                     bands::Int64,
-                    boson_site::Int64
+                    boson_modes::Int64
                 )
 
     w = term.w
     g = term.g
     mean_ne = term.mean_ne
 
-    period = bands + boson_site
+    period = bands + boson_modes
 
-    electron_sites = [i + div(i-1, bands)*boson_site  for i in 1:(cell_width*bands)]
-
-    phonon_sites_by_mode = [Int64[] for _ in 1:length(w)]
-    for c in 0:(cell_width-1)
-        for m in 1:length(w)
-            i  = c * period + bands + m
-            append!(phonon_sites_by_mode[m], i)
-        end
-    end
+    electron_sites = [i + div(i-1, bands)*boson_modes  for i in 1:(cell_width*bands)]
+    electron_ind(i) = mod1(i, period)
+    phonon_sites = [i + bands + div(i-1, boson_modes)*bands  for i in 1:(cell_width*boson_modes)]
+    phonon_ind(i) = mod1(i, period) - bands
 
     # onsite phonon terms: ω_m * nb on each phonon site of mode m
-    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = vcat([
-        [(j,) => w[m] * ops.nb for j in phonon_sites_by_mode[m]]
-        for m in 1:length(w)
-    ]...)
+    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w[phonon_ind(i)]*ops.nb for i in phonon_sites]
 
     # coupling terms: g[b,m] couples band b electrons to phonon mode m in the same cell
-    for m in 1:length(w)
-        for c in 0:(cell_width-1)
-            j = c * period + bands + m              
-            for b in 1:bands
-                i = c * period + b              
-                push!(h,
-                    (i, j) => g[b, m] *
+    for e in electron_sites
+        for p in phonon_sites
+            same_cell = cld(e, period) == cld(p, period)
+            if same_cell
+                push!(h, (e, p) => g[electron_ind(e), phonon_ind(p)] *
                             (ops.n - mean_ne*id(domain(ops.n))) ⊗
-                            (ops.bmin + ops.bplus))
+                            (ops.bmin + ops.bplus)
+                        )
             end
         end
     end
@@ -357,7 +348,7 @@ function hamiltonian_term(
                     ops, 
                     cell_width::Int64,
                     bands::Int64,
-                    boson_site::Int64
+                    boson_modes::Int64
                 )
 
     alpha = term.alpha
@@ -365,7 +356,7 @@ function hamiltonian_term(
     beta = term.beta
     b0, b01 = beta
 
-    period = bands + boson_site
+    period = bands + boson_modes
     electron_sites = [i for i in 1:period*cell_width if (i%period != 0 || period==bands)]
 
     hopping_onsite = ops.c⁺pair + ops.cpair

@@ -15,4 +15,5 @@ deploydocs(
     repo = "github.com/DaanVrancken/HubbardTN.jl.git",
     push_preview = true,
     devbranch = "master",
+    versions = ["stable" => "v^", "v#.#", "dev" => "dev"]
 )
