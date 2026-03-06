@@ -8,7 +8,7 @@ export SymmetryConfig, HubbardParams, CalcConfig
 export ThreeBodyTerm, MagneticField, StaggeredField, HolsteinTerm, Bollmark
 export hamiltonian, compute_groundstate, find_chemical_potential
 export compute_excitations, compute_domainwall, compute_bandgap, compute_spingap, compute_pairing_energy
-export dim_state, density_e, density_b, density_spin, calc_ms
+export dim_state, density_e, density_b, density_spin, calc_ms, density_correlations
 export save_computation, load_computation, save_state, load_state, dict_tag
 export get_alpha, get_beta
 

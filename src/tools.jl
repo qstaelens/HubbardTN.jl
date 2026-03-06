@@ -168,6 +168,56 @@ function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) wh
     return [b0, b01]
 end
 
+"""
+    density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr::Float64=1e-10)
+
+Compute connected density–density correlations
+
+    C(r) = ⟨n₀ n_r⟩ − ⟨n⟩²
+
+for distances `r = 1:R` in the infinite MPS `ψ`.
+
+The function prints the correlation values and stops early if the
+magnitude falls below `thr`, which helps avoid unnecessary evaluations
+once correlations have effectively decayed.
+
+The site spacing accounts for interleaved boson modes and electronic
+bands defined in `calc`. The resulting correlations can later be used
+to estimate the charge Luttinger parameter `Kρ` from the small-q
+behavior of the density structure factor.
+"""
+function density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr::Float64=1e-10)
+
+    symm = calc.symmetries
+    ps   = symm.particle_symmetry
+    ss   = symm.spin_symmetry
+
+    # --- Kρ estimate from density structure factor at small q ---
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
+    boson_modes = (idx === nothing ? 0 : 1) * length(w)
+    bands = calc.hubbard.bands
+
+    n = number_e(ps, ss)
+
+    # connected density correlator C(r) = <n0 n_r> - <n>^2
+    C = zeros(Float64, R)
+    nn = n ⊗ n
+    for r in 1:R
+        sr = 1 + (r-1) * (boson_modes + bands)
+        C[r] = real(expectation_value(ψ, (1, sr) => nn) - (expectation_value(ψ, (1) => n) * expectation_value(ψ, (sr) => n)))
+        #println("r=$r  C[r]=$(C[r])")
+
+        if abs(C[r]) < 1e-10
+            println("Correlation below threshold at r=$r → stopping.")
+            C = C[1:r]   
+        break
+        end
+    end
+
+    return C
+end
+
 
 
 ##########
