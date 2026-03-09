@@ -269,32 +269,46 @@ end
 """
     HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
-Represents a Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and`gₐ(nᵢₐ-<n>)(b⁺ᵢ + bᵢ)` in the Hamiltonian.
+Represents Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and `gₐ(nᵢₐ-<n>)(b⁺ⱼ + bⱼ)` in the Hamiltonian.
+The coupling may be local (`i=j`) or exponentially decaying with distance `exp(-rᵢⱼ/ξ)`. Couplings smaller than `threshold` are neglected.
 
 # Fields
 - `w::Vector{T}`  
     Local phonon frequency.
 - `g::Matrix{T}`  
-    Electron–phonon coupling strength per phonon.
+    Electron–phonon coupling strength per phonon and per band, size = (bands, nmodes).
 - `max_b::Int64`  
     Maximum number of phonons allowed per mode.
 - `mean_ne::T`  
     Mean number of electrons in Hubbard model.
+- `xi::T`  
+    Exponential decay length of the nonlocal coupling.
+- `threshold::T`  
+    Minimum coupling strength retained in the Hamiltonian.
 
 # Constructors
-- `HolsteinTerm(w, g, max_b, mean_ne)` — creates the term with specified phonon frequency,
-  coupling, and phonon truncation.
+- `HolsteinTerm(w, g, max_b, mean_ne)` — local Holstein coupling.
+- `HolsteinTerm(w, g, max_b, mean_ne, xi, threshold)` — exponentially decaying nonlocal Holstein coupling.
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
-    w::Vector{T}                # Phonon frequency in term `w b⁺ᵢ bᵢ`
-    g::Matrix{T}                # Electron-phonon coupling strength per Hubbard band and per phonon
-    max_b::Int64                # Max allowed phonons per site
-    mean_ne::T                  # Mean number of electrons in Hubbard model
+    w::Vector{T}                
+    g::Matrix{T}                
+    max_b::Int64                
+    mean_ne::T                  
+    xi::T                       
+    threshold::T
 
     function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
         @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
         @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
-        new{T}(w, g, max_b, mean_ne)
+        new{T}(w, g, max_b, mean_ne, zero(T), zero(T))
+    end
+    function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T, xi::T, threshold::T) where {T<:AbstractFloat}
+        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
+        @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
+        @assert xi > 0 "xi must be positive"
+        @assert threshold ≥ zero(T) "threshold must be nonnegative"
+        new{T}(w, g, max_b, mean_ne, xi, threshold)
     end
 end
 
