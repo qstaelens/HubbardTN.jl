@@ -206,7 +206,7 @@ function density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr:
     for r in 1:R
         sr = 1 + (r-1) * (boson_modes + bands)
         C[r] = real(expectation_value(ψ, (1, sr) => nn) - (expectation_value(ψ, (1) => n) * expectation_value(ψ, (sr) => n)))
-        #println("r=$r  C[r]=$(C[r])")
+        println("r=$(r-1)  C[r]=$(C[r])")
 
         if abs(C[r]) < 1e-10
             println("Correlation below threshold at r=$r → stopping.")
@@ -214,8 +214,6 @@ function density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr:
         break
         end
     end
-
-    return C
 end
 
 
