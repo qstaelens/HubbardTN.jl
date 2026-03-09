@@ -61,7 +61,7 @@ end
 E_norm = [0.857459787766349, 0.8574129912354749, 0.8574099883087606, 0.8574097771101556]
 Ms_norm = [0.0, 0.19747222195453984, 0.20971989470700436, 0.21058138922470027, 0.21064333590417433]
 
-@testset "find " begin
+@testset "Self consistent staggered magetization " begin
     E_list, Ms_list = run_self_consistent_ms(symm, t, U, J_inter)
     @test E_list[2] ≈ E_norm[2] atol=tol
     @test Ms_list[2] ≈ Ms_norm[2] atol=tol
