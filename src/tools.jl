@@ -111,61 +111,113 @@ end
 
 
 """
-    get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute α-coefficients from pair correlators.
 
-Returns `[a0, a01]`, where:
+Here:
+- `ty` is the hopping between sites within a ladder, i.e. in the plane of the ladder,
+- `tz` is the hopping to the ladders below and above the ladder under consideration.
+
+For a 1-band model, returns `[a0, a01]`, where:
 - `a0`  is the onsite contribution from ⟨c↓ c↑⟩,
 - `a01` is the nearest-neighbor contribution from ⟨c↑₁ c↓₂⟩.
 
+For a 2-band model, returns `[a0, a1, a00, a01, a10, a11]`.
+
 Only onsite and nearest-neighbor terms are included.
 """
-function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
-    ps   = symm.particle_symmetry
-    ss   = symm.spin_symmetry
+function get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm  = calc.symmetries
+    ps    = symm.particle_symmetry
+    ss    = symm.spin_symmetry
+    bands = calc.hubbard.bands
 
-    @assert ty == tz "We currently assume ty == tz"
-    @assert Ep != 0  "Ep must be nonzero"
+    @assert Ep != 0 "Ep must be nonzero"
 
     # onsite pair annihilation Δ = c↓ c↑
-    Δ  = delete_pair_onesite(ps, ss)
-    c0 = real(expectation_value(ψ, 1 => Δ))
-    c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+    Δ   = delete_pair_onesite(ps, ss)
 
-    a01 = 2 * 4 * tz^2 * c01 / Ep
-    a0  = 2 * 4 * tz^2 * c0  / Ep
+    if bands == 1
+        c0  = real(expectation_value(ψ, 1 => Δ))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
 
-    return [a0, a01]
+        a01 = 2 * 4 * ty * tz * c01 / Ep
+        a0  = 2 * 4 * ty * tz * c0  / Ep
+
+        return [a0, a01]
+
+    elseif bands == 2
+        c0 = real(expectation_value(ψ, 1 => Δ))
+        c1 = real(expectation_value(ψ, 2 => Δ))
+        c00 = real(expectation_value(ψ, (1,3) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+        c11 = real(expectation_value(ψ, (2,4) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+
+        a00 = 2 * (ty^2 * c11 + 2 * tz * c00) / Ep
+        a11 = 2 * (ty^2 * c00 + 2 * tz * c11) / Ep
+        a01 = 4 * tz^2 * c01 / Ep
+        a0 = 2 * (ty^2 * c1 + 2 * tz^2 * c0) / Ep
+        a1 = 2 * (ty^2 * c0 + 2 * tz^2 * c1) / Ep
+
+        return [a0, a1, a00, a01, a01, a11]
+
+    else
+        error("get_alpha is only implemented for 1-band and 2-band models, got bands = $bands")
+    end
 end
 
 """
-    get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute β-coefficients from density and hopping correlators.
 
-Returns `[b0, b01]`, where:
+Here:
+- `ty` is the hopping between sites within a ladder, i.e. in the plane of the ladder,
+- `tz` is the hopping to the ladders below and above the ladder under consideration.
+
+For a 1-band model, returns `[b0, b01]`, where:
 - `b0`  is the onsite contribution from ⟨n⟩,
 - `b01` is the nearest-neighbor contribution from ⟨c†₁ c₂⟩.
 
+For a 2-band model, returns `[b00, b01, b10, b11]`.
+
 Only onsite and nearest-neighbor terms are included.
 """
-function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
-    ps   = symm.particle_symmetry
-    ss   = symm.spin_symmetry
+function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm  = calc.symmetries
+    ps    = symm.particle_symmetry
+    ss    = symm.spin_symmetry
+    bands = calc.hubbard.bands
 
-    @assert ty == tz "We currently assume ty == tz"
-    @assert Ep != 0  "Ep must be nonzero"
+    @assert Ep != 0 "Ep must be nonzero"
 
-    n  = number_e(ps, ss)
-    c0 = real(expectation_value(ψ, 1 => n))
-    c  = c_plusmin(ps, ss)
-    c01 = real(expectation_value(ψ, (1,2) => c))
+    if bands == 1
+        n   = number_e(ps, ss)
+        c0  = real(expectation_value(ψ, 1 => n))
+        c   = c_plusmin(ps, ss)
+        c01 = real(expectation_value(ψ, (1,2) => c))
 
-    b01 = 2 * 4 * tz^2 * c01 / Ep
-    b0  = 2 * 4 * tz^2 * c0  / Ep
+        b01 = 2 * 4 * tz^2 * c01 / Ep
+        b0  = 2 * 4 * tz^2 * c0  / Ep
 
-    return [b0, b01]
+        return [b0, b01]
+
+    elseif bands == 2
+        c00 = real(expectation_value(ψ, (1,3) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+        c11 = real(expectation_value(ψ, (2,4) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+
+        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / Ep
+        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / Ep
+        b10 = (4 * tz^2 * c01) / Ep
+        b01 = (4 * tz^2 * c10) / Ep
+
+        return [b00, b01, b10, b11]
+
+    else
+        error("get_beta is only implemented for 1-band and 2-band models, got bands = $bands")
+    end
 end
 
 """
