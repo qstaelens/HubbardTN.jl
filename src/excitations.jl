@@ -201,7 +201,7 @@ function compute_pairing_energy(gs::Dict{String,Any}, symm::SymmetryConfig; reso
     ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
     ex_double = compute_excitations(gs, momenta, charges_double; nums=1)
 
-    Es = 2*ex_add["Es"] .- ex_double["Es"]
-    gap, k = findmin(real.(Es[:,1]))
+    Ep = 2*ex_add["Es"] .- ex_double["Es"]
+    gap, k = findmin(real.(Ep[:,1]))
     return gap, momenta[k]
 end
