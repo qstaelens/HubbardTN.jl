@@ -30,6 +30,8 @@ E_ref = -1.2713317702997016
 
     @test Nb[1] ≈ 0.0 atol=tol
     @test Nb[2] ≈ 0.0 atol=tol
+
+    @test Ne[1] ≈ Ne[2] atol=tol
 end
 
 E_ref = -3.2705801927593416
@@ -56,6 +58,8 @@ E_ref = -3.2705801927593416
 
     @test Nb[1] ≈ max_b atol=tol
     @test Nb[2] ≈ max_b atol=tol
+
+    @test Ne[1] ≈ Ne[2] atol=tol
 end
 
 E_ref = -2.038990604938512
@@ -157,5 +161,5 @@ E_ref = -1.717276517157937
     @test Nb[1] ≈ 0.0 atol=tol
     @test Nb[2] ≈ 0.0 atol=tol
 
-    @test Ne[1] = Ne[2] atol=tol
+    @test Ne[1] ≈ Ne[2] atol=tol
 end
