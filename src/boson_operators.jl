@@ -13,7 +13,25 @@ function boson_space(::Type{Trivial}, ::Type{U1Irrep}, cutoff::Int64; kwargs...)
 end
 function boson_space(::Type{U1Irrep}, ::Type{U1Irrep}, cutoff::Int64; filling::Rational{Int}=1//1)
     P = numerator(filling); Q = denominator(filling)
-    return Vect[FermionParity ⊠ U1Irrep ⊠ U1Irrep]((0, -P, 0) => cutoff + 1, (0, 2Q-P, 0) => cutoff + 1)
+    return Vect[FermionParity ⊠ U1Irrep ⊠ U1Irrep]((0, -P, 0) => cutoff + 1)
+end
+
+"""
+    b_min(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64)
+
+The truncated bosonic annihilation operator, with a maximum of `cutoff` bosons per site.
+"""
+b_min(ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64; kwargs...) = b_min(ComplexF64, ps, ss, cutoff; kwargs...)
+function b_min(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64; kwargs...)
+    pspace = boson_space(ps, ss, cutoff; kwargs...)
+    b⁻ = zeros(elt, pspace ← pspace)
+    for s in sectors(pspace)
+        for i in 1:cutoff
+            block(b⁻, s)[i, i+1] = sqrt(i)
+        end
+    end
+
+    return b⁻
 end
 
 """
@@ -33,25 +51,6 @@ function b_plus(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cut
     end
 
     return b⁺
-end
-
-"""
-    b_min(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64)
-
-The truncated bosonic annihilation operator, with a maximum of `cutoff` bosons per site.
-"""
-b_min(ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64; kwargs...) = b_min(ComplexF64, ps, ss, cutoff; kwargs...)
-function b_min(elt::Type{<:Number}, ps::Type{<:Sector}, ss::Type{<:Sector}, cutoff::Int64; kwargs...)
-    pspace = boson_space(ps, ss, cutoff; kwargs...)
-
-    b⁻ = zeros(elt, pspace ← pspace)
-    for s in sectors(pspace)
-        for i in 1:cutoff
-            block(b⁻, s)[i, i+1] = sqrt(i)
-        end
-    end
-
-    return b⁻
 end
 
 """

@@ -52,13 +52,14 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
     max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
     w = (idx === nothing ? [] : calc.terms[idx].w)
 
-    n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
+    n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b; filling=symm.filling)
     bands = calc.hubbard.bands
 
     Nb = zeros(length(w), symm.cell_width)
     for i in 1:length(w)
         for j in 1:symm.cell_width
-            Nb[i,j] = real(expectation_value(ψ, (j-1)*(bands+i) => n))
+            site = i+(j-1)*(bands+length(w)) + bands
+            Nb[i,j] = real(expectation_value(ψ, site => n))
         end
     end
     
@@ -116,7 +117,7 @@ end
 Compute α-coefficients from pair correlators.
 
 Here:
-- `ty` is the hopping between sites within a ladder, i.e. in the plane of the ladder,
+- `ty` is the hopping between neighboring ladders within the same plane,
 - `tz` is the hopping to the ladders below and above the ladder under consideration.
 
 For a 1-band model, returns `[a0, a01]`, where:
@@ -173,7 +174,7 @@ end
 Compute β-coefficients from density and hopping correlators.
 
 Here:
-- `ty` is the hopping between sites within a ladder, i.e. in the plane of the ladder,
+- `ty` is the hopping between neighboring ladders within the same plane,
 - `tz` is the hopping to the ladders below and above the ladder under consideration.
 
 For a 1-band model, returns `[b0, b01]`, where:
