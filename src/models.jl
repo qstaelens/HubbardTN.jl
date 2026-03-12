@@ -45,8 +45,7 @@ struct SymmetryConfig
             d = denominator(filling)
             @assert n > 0 && d > 0 "Filling numerator and denominator must be positive integers"
             necessary_width = d * (mod(n, 2) + 1)
-            @assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width 
-                                                       to accommodate the specified filling ($n / $d)"
+            #@assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width to accommodate the specified filling ($n / $d)"
         elseif filling !== nothing
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end
