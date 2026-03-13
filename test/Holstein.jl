@@ -105,7 +105,7 @@ E_ref = -0.895169445564952
     model = HubbardParams([2.0, 1.0], [4.0])
     calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
-    gs = compute_groundstate(calc; svalue=2.5)
+    gs = compute_groundstate(calc; svalue=3.0)
     ψ  = gs["groundstate"]
     H  = gs["ham"]
 

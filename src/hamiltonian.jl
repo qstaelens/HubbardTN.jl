@@ -343,7 +343,6 @@ function hamiltonian_term(
                 g[be,m] * exp(-r/xi)
 
             if abs(g_eff) ≥ thr && g_eff != 0
-                println(e, p, g_eff)
                 push!(h, (e,p) => g_eff * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus))
             end
         end
