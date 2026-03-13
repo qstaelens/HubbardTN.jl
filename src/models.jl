@@ -41,11 +41,6 @@ struct SymmetryConfig
 
         if particle_symmetry == U1Irrep
             filling = filling === nothing ? 1//1 : filling
-            n = numerator(filling)
-            d = denominator(filling)
-            @assert n > 0 && d > 0 "Filling numerator and denominator must be positive integers"
-            necessary_width = d * (mod(n, 2) + 1)
-            @assert cell_width % necessary_width == 0 "Cell width ($cell_width) must be a multiple of $necessary_width to accommodate the specified filling ($n / $d)"
         elseif filling !== nothing
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end
@@ -391,8 +386,30 @@ struct CalcConfig{
                 @assert term.bands == bands "Number of bands in HubbardParams does not match number of bands in $term"
             end
             if term isa HolsteinTerm
-                @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
+            @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
+
+            if symmetries.filling !== nothing
+                oldf = symmetries.filling
+                n = numerator(oldf)
+                d = denominator(oldf)
+                @assert n > 0 && d > 0 "Filling numerator and denominator must be positive integers"
+                necessary_width = d * (mod(n, 2) + 1)
+                @assert symmetries.cell_width % necessary_width == 0 "Cell width $(symmetries.cell_width) must be a multiple of $necessary_width to accommodate the specified filling ($n / $d)"
+                
+                if term isa HolsteinTerm
+                    newf = oldf * bands // (bands + length(term.w))
+                else
+                    newf = oldf
+                end
+                
+                symmetries = SymmetryConfig(
+                    symmetries.particle_symmetry,
+                    symmetries.spin_symmetry,
+                    symmetries.cell_width,
+                    newf
+                )
             end
+end
         end
 
         new{T, HamiltonianTerms}(symmetries, hubbard, terms)
