@@ -386,8 +386,8 @@ struct CalcConfig{
                 @assert term.bands == bands "Number of bands in HubbardParams does not match number of bands in $term"
             end
             if term isa HolsteinTerm
-            @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
-
+                @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
+            end
             if symmetries.filling !== nothing
                 oldf = symmetries.filling
                 n = numerator(oldf)
@@ -409,7 +409,6 @@ struct CalcConfig{
                     newf
                 )
             end
-end
         end
 
         new{T, HamiltonianTerms}(symmetries, hubbard, terms)

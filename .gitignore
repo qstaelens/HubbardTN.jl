@@ -9,8 +9,5 @@ docs/site/
 
 # Ignore all data files
 /data/
-/examples/06_three_band.jl
-/examples/04_QS.jl
-/examples/05_QS.jl
-/examples/06_QS.jl
-/examples/07_QS.jl
+/examples/*_QS.jl
+/examples/*_QS_2.jl

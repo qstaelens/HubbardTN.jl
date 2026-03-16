@@ -93,13 +93,13 @@ E_ref = -2.038990604938512
     @test Ne[1] != Ne[2]
 end
 
-E_ref = -0.895169445564952
+E_ref = -0.9506609704372836
 
 @testset "Hubbard–Holstein: 2 phonons for 1 band" begin
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
     w = [1.0, 1.0]
-    g = [1.0 1.0;]
+    g = [1.0 1.2;]
     max_b = 10
 
     model = HubbardParams([2.0, 1.0], [4.0])
