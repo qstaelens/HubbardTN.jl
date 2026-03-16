@@ -52,13 +52,14 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
     max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
     w = (idx === nothing ? [] : calc.terms[idx].w)
 
-    n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b)
+    n = number_b(symm.particle_symmetry, symm.spin_symmetry, max_b; filling=symm.filling)
     bands = calc.hubbard.bands
 
     Nb = zeros(length(w), symm.cell_width)
     for i in 1:length(w)
         for j in 1:symm.cell_width
-            Nb[i,j] = real(expectation_value(ψ, (j-1)*(bands+i) => n))
+            site = i+(j-1)*(bands+length(w)) + bands
+            Nb[i,j] = real(expectation_value(ψ, site => n))
         end
     end
     
@@ -111,61 +112,161 @@ end
 
 
 """
-    get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute α-coefficients from pair correlators.
 
-Returns `[a0, a01]`, where:
+Here:
+- `ty` is the hopping between neighboring ladders within the same plane,
+- `tz` is the hopping to the ladders below and above the ladder under consideration.
+
+For a 1-band model, returns `[a0, a01]`, where:
 - `a0`  is the onsite contribution from ⟨c↓ c↑⟩,
 - `a01` is the nearest-neighbor contribution from ⟨c↑₁ c↓₂⟩.
 
+For a 2-band model, returns `[a0, a1, a00, a01, a10, a11]`.
+
 Only onsite and nearest-neighbor terms are included.
 """
-function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
-    ps   = symm.particle_symmetry
-    ss   = symm.spin_symmetry
+function get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm  = calc.symmetries
+    ps    = symm.particle_symmetry
+    ss    = symm.spin_symmetry
+    bands = calc.hubbard.bands
 
-    @assert ty == tz "We currently assume ty == tz"
-    @assert Ep != 0  "Ep must be nonzero"
+    @assert Ep != 0 "Ep must be nonzero"
 
     # onsite pair annihilation Δ = c↓ c↑
-    Δ  = delete_pair_onesite(ps, ss)
-    c0 = real(expectation_value(ψ, 1 => Δ))
-    c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+    Δ   = delete_pair_onesite(ps, ss)
 
-    a01 = 2 * 4 * tz^2 * c01 / Ep
-    a0  = 2 * 4 * tz^2 * c0  / Ep
+    if bands == 1
+        c0  = real(expectation_value(ψ, 1 => Δ))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
 
-    return [a0, a01]
+        a01 = 2 * 4 * ty * tz * c01 / Ep
+        a0  = 2 * 4 * ty * tz * c0  / Ep
+
+        return [a0, a01]
+
+    elseif bands == 2
+        c0 = real(expectation_value(ψ, 1 => Δ))
+        c1 = real(expectation_value(ψ, 2 => Δ))
+        c00 = real(expectation_value(ψ, (1,3) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+        c11 = real(expectation_value(ψ, (2,4) => HubbardOperators.u_min_d_min(ComplexF64, ps, ss)))
+
+        a00 = 2 * (ty^2 * c11 + 2 * tz * c00) / Ep
+        a11 = 2 * (ty^2 * c00 + 2 * tz * c11) / Ep
+        a01 = 4 * tz^2 * c01 / Ep
+        a0 = 2 * (ty^2 * c1 + 2 * tz^2 * c0) / Ep
+        a1 = 2 * (ty^2 * c0 + 2 * tz^2 * c1) / Ep
+
+        return [a0, a1, a00, a01, a01, a11]
+
+    else
+        error("get_alpha is only implemented for 1-band and 2-band models, got bands = $bands")
+    end
 end
 
 """
-    get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute β-coefficients from density and hopping correlators.
 
-Returns `[b0, b01]`, where:
+Here:
+- `ty` is the hopping between neighboring ladders within the same plane,
+- `tz` is the hopping to the ladders below and above the ladder under consideration.
+
+For a 1-band model, returns `[b0, b01]`, where:
 - `b0`  is the onsite contribution from ⟨n⟩,
 - `b01` is the nearest-neighbor contribution from ⟨c†₁ c₂⟩.
 
+For a 2-band model, returns `[b00, b01, b10, b11]`.
+
 Only onsite and nearest-neighbor terms are included.
 """
-function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm  = calc.symmetries
+    ps    = symm.particle_symmetry
+    ss    = symm.spin_symmetry
+    bands = calc.hubbard.bands
+
+    @assert Ep != 0 "Ep must be nonzero"
+
+    if bands == 1
+        n   = number_e(ps, ss)
+        c0  = real(expectation_value(ψ, 1 => n))
+        c   = c_plusmin(ps, ss)
+        c01 = real(expectation_value(ψ, (1,2) => c))
+
+        b01 = 2 * 4 * tz^2 * c01 / Ep
+        b0  = 2 * 4 * tz^2 * c0  / Ep
+
+        return [b0, b01]
+
+    elseif bands == 2
+        c00 = real(expectation_value(ψ, (1,3) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+        c11 = real(expectation_value(ψ, (2,4) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+
+        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / Ep
+        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / Ep
+        b10 = (4 * tz^2 * c01) / Ep
+        b01 = (4 * tz^2 * c10) / Ep
+
+        return [b00, b01, b10, b11]
+
+    else
+        error("get_beta is only implemented for 1-band and 2-band models, got bands = $bands")
+    end
+end
+
+"""
+    density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr::Float64=1e-10)
+
+Compute connected density–density correlations
+
+    C(r) = ⟨n₀ n_r⟩ − ⟨n⟩²
+
+for distances `r = 1:R` in the infinite MPS `ψ`.
+
+The function prints the correlation values and stops early if the
+magnitude falls below `thr`, which helps avoid unnecessary evaluations
+once correlations have effectively decayed.
+
+The site spacing accounts for interleaved boson modes and electronic
+bands defined in `calc`. The resulting correlations can later be used
+to estimate the charge Luttinger parameter `Kρ` from the small-q
+behavior of the density structure factor.
+"""
+function density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr::Float64=1e-10)
+
+    symm = calc.symmetries
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
-    @assert ty == tz "We currently assume ty == tz"
-    @assert Ep != 0  "Ep must be nonzero"
+    # --- Kρ estimate from density structure factor at small q ---
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
+    boson_modes = (idx === nothing ? 0 : 1) * length(w)
+    bands = calc.hubbard.bands
 
-    n  = number_e(ps, ss)
-    c0 = real(expectation_value(ψ, 1 => n))
-    c  = c_plusmin(ps, ss)
-    c01 = real(expectation_value(ψ, (1,2) => c))
+    n = number_e(ps, ss)
 
-    b01 = 2 * 4 * tz^2 * c01 / Ep
-    b0  = 2 * 4 * tz^2 * c0  / Ep
+    # connected density correlator C(r) = <n0 n_r> - <n>^2
+    C = zeros(Float64, R)
+    nn = n ⊗ n
+    for r in 1:R
+        sr = 1 + (r-1) * (boson_modes + bands)
+        C[r] = real(expectation_value(ψ, (1, sr) => nn) - (expectation_value(ψ, (1) => n) * expectation_value(ψ, (sr) => n)))
+        println("r=$(r-1)  C[r]=$(C[r])")
 
-    return [b0, b01]
+        if abs(C[r]) < 1e-10
+            println("Correlation below threshold at r=$r → stopping.")
+            C = C[1:r]   
+        break
+        end
+    end
 end
 
 

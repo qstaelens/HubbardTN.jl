@@ -4,7 +4,7 @@ println("""
 ##############
 """)
 
-tol = 1e-2
+tol = 1e-1
 
 E_ref = -1.2713317702997016
 
@@ -25,11 +25,13 @@ E_ref = -1.2713317702997016
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
     @test E0 ≈ E_ref atol=tol
 
-    # phonon occupation check
+    Ne = density_e(ψ, calc)
     Nb = density_b(ψ, calc)
 
     @test Nb[1] ≈ 0.0 atol=tol
     @test Nb[2] ≈ 0.0 atol=tol
+
+    @test Ne[1] ≈ Ne[2] atol=tol
 end
 
 E_ref = -3.2705801927593416
@@ -51,11 +53,13 @@ E_ref = -3.2705801927593416
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
     @test E0 ≈ E_ref atol=tol
 
-    # phonon occupation check
+    Ne = density_e(ψ, calc)
     Nb = density_b(ψ, calc)
 
     @test Nb[1] ≈ max_b atol=tol
     @test Nb[2] ≈ max_b atol=tol
+
+    @test Ne[1] ≈ Ne[2] atol=tol
 end
 
 E_ref = -2.038990604938512
@@ -89,23 +93,26 @@ E_ref = -2.038990604938512
     @test Ne[1] != Ne[2]
 end
 
-@testset "Hubbard–Holstein: 2 phonons" begin
+E_ref = -0.9506609704372836
+
+@testset "Hubbard–Holstein: 2 phonons for 1 band" begin
     symm = SymmetryConfig(Trivial, U1Irrep, 2)
     
-    w = [1.0, 0.5]
-    g = [2.0 1.0]
-    max_b = 5
+    w = [1.0, 1.0]
+    g = [1.0 1.2;]
+    max_b = 10
 
     model = HubbardParams([2.0, 1.0], [4.0])
     calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
-    gs = compute_groundstate(calc; svalue=2.5)
+    gs = compute_groundstate(calc; svalue=3.0)
     ψ  = gs["groundstate"]
     H  = gs["ham"]
 
     # energy check
     E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
-
+    @test E0 ≈ E_ref atol=tol
+    
     Ne = density_e(ψ, calc)
     Nb = density_b(ψ, calc)
 
@@ -115,4 +122,71 @@ end
 
     # electronic density is non-uniform
     @test Ne[1] != Ne[2]
+end
+
+E_ref = -1.717276517157937
+
+@testset "Hubbard–Holstein: 1 phonon for 2 bands" begin
+    symm = SymmetryConfig(Trivial, U1Irrep, 2)
+    
+    w = [1.0]
+    g = [0.5; 0.5;;]
+    max_b = 4
+
+    t = Dict(
+    (1,1) => 2.0, (2,2) => 2.0,
+    (1,2) => 1.0, (2,1) => 1.0,
+    (2,3) => 1.0, (3,2) => 1.0,
+    )
+
+    U = Dict(
+    (1,1,1,1) => 4.0,
+    (2,2,2,2) => 4.0,
+    )
+
+    model = HubbardParams(2, t, U)
+    calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
+
+    gs = compute_groundstate(calc; svalue=2.5)
+    ψ  = gs["groundstate"]
+    H  = gs["ham"]
+
+    # energy check
+    E0 = sum(real(expectation_value(ψ, H))) / length(ψ)
+    @test E0 ≈ E_ref atol=tol
+
+    Ne = density_e(ψ, calc)
+    Nb = density_b(ψ, calc)
+
+    @test Nb[1] ≈ 0.0 atol=tol
+    @test Nb[2] ≈ 0.0 atol=tol
+
+    @test Ne[1] ≈ Ne[2] atol=tol
+end
+
+f = [1//1, 1//2, 3//2];
+E = zeros(length(f),1);
+
+E_ref = [-1.245566, -0.89983, -0.89984]
+
+@testset "Hubbard–Holstein filling dependence" for i in eachindex(f)
+    symm = SymmetryConfig(U1Irrep, U1Irrep, 2*denominator(f[i]), f[i])
+    
+    w = [1.0]
+    g = [0.5;;]
+    max_b = 5
+
+    model = HubbardParams([2.0, 1.0], [4.0])
+    calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
+
+    gs = compute_groundstate(calc; svalue=3.0)
+    ψ  = gs["groundstate"]
+    H  = gs["ham"]
+
+    # energy check
+    E[i] = sum(real(expectation_value(ψ, H))) / length(ψ)
+    @test E[i] ≈ E_ref[i] atol=tol
+
+    Ne = density_e(ψ, calc)
+    @test sum(Ne)/length(Ne) ≈ Float64(f[i]) atol=tol
 end

@@ -73,6 +73,6 @@ for i in 1:5
 
     ty = 0.5
     tz = 0.5
-    alpha = get_alpha(ψ, symm, ty, tz, pairing_gap)
-    beta = get_beta(ψ, symm, ty, tz, pairing_gap)
+    alpha = get_alpha(ψ, calc, ty, tz, pairing_gap)
+    beta = get_beta(ψ, calc, ty, tz, pairing_gap)
 end
