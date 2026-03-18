@@ -67,7 +67,7 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 """
-    density_spin(ψ::InfiniteMPS, symm::CalcConfig)
+    density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the electron spin density per site in the unit cell.
 """
@@ -97,7 +97,7 @@ function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 """
-    calc_ms(ψ::InfiniteMPS, symm::SymmetryConfig)
+    calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the staggered magnetization in an InfiniteMPS.
 """
