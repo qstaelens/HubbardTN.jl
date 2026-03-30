@@ -125,8 +125,8 @@ function compute_bandgap(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int
     ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
     ex_rem = compute_excitations(gs, momenta, charges_hole; nums=1)
 
-    Es = ex_add["Es"] .+ ex_rem["Es"]
-    gap, k = findmin(real.(Es[:,1]))
+    Eb = ex_add["Es"] .+ ex_rem["Es"]
+    gap, k = findmin(real.(Eb[:,1]))
     return gap, momenta[k]
 end
 
@@ -203,7 +203,47 @@ function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resoluti
     ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
     ex_double = compute_excitations(gs, momenta, charges_double; nums=1)
 
-    Es = 2*ex_add["Es"] .- ex_double["Es"]
-    gap, k = findmin(real.(Es[:,1]))
+    Ep = 2*ex_add["Es"] .- ex_double["Es"]
+    gap, k = findmin(real.(Ep[:,1]))
+    return gap, momenta[k]
+end
+
+"""
+    compute_chargegap(gs, symm; resolution=5)
+
+Compute the charge gap from two-particle addition excitations on a uniform momentum grid.
+
+# Arguments
+- `gs::Dict{String,Any}`: Ground-state data as produced by `compute_groundstate`,
+  containing the state, Hamiltonian, and environments.
+- `symm::SymmetryConfig`: Symmetry configuration. The particle symmetry must be
+  `U1Irrep`.
+
+# Keyword Arguments
+- `resolution::Int=5`: Number of momentum points in the uniform grid between
+  `0` and `π` (inclusive).
+
+# Returns
+- `(gap, kmin)`: The minimum charge excitation energy over the sampled momenta
+  and the corresponding momentum `k`.
+"""
+function compute_chargegap(gs::Dict{String,Any}, symm::SymmetryConfig; resolution::Int64=5)
+    @assert symm.particle_symmetry==U1Irrep "Particle symmetry must be of type U1Irrep."
+    d = denominator(symm.filling)
+    if symm.spin_symmetry==Trivial
+        charges_particle = [0, 2*d]
+    else
+        charges_particle = [0, 2*d, 0]
+    end
+    charges_hole = copy(charges_particle)
+    charges_hole[2] *= -1
+
+    momenta = collect(range(0, π, resolution))
+
+    ex_add = compute_excitations(gs, momenta, charges_particle; nums=1)
+    ex_rem = compute_excitations(gs, momenta, charges_hole; nums=1)
+
+    Ec = 0.5 .* (ex_add["Es"] .+ ex_rem["Es"])
+    gap, k = findmin(real.(Ec[:,1]))
     return gap, momenta[k]
 end

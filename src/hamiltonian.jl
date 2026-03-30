@@ -306,36 +306,44 @@ function hamiltonian_term(
 end
 # Holstein coupling term
 function hamiltonian_term(
-                    term::HolsteinTerm, 
-                    ops, 
-                    cell_width::Int64,
-                    bands::Int64,
-                    boson_modes::Int64
-                )
+        term::HolsteinTerm,
+        ops,
+        cell_width::Int64,
+        bands::Int64,
+        boson_modes::Int64
+)
 
     w = term.w
     g = term.g
     mean_ne = term.mean_ne
+    xi = term.xi
+    thr = term.threshold
 
     period = bands + boson_modes
 
-    electron_sites = [i + div(i-1, bands)*boson_modes  for i in 1:(cell_width*bands)]
+    electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
     electron_ind(i) = mod1(i, period)
-    phonon_sites = [i + bands + div(i-1, boson_modes)*bands  for i in 1:(cell_width*boson_modes)]
+    phonon_sites = [i + bands + div(i-1, boson_modes)*bands for i in 1:(cell_width*boson_modes)]
     phonon_ind(i) = mod1(i, period) - bands
+    cell(i) = div(i-1, period)
 
-    # onsite phonon terms: ω_m * nb on each phonon site of mode m
-    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w[phonon_ind(i)]*ops.nb for i in phonon_sites]
+    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w[phonon_ind(i)] * ops.nb for i in phonon_sites]
 
-    # coupling terms: g[b,m] couples band b electrons to phonon mode m in the same cell
     for e in electron_sites
+        ce = cell(e)
+        be = electron_ind(e)
         for p in phonon_sites
-            same_cell = cld(e, period) == cld(p, period)
-            if same_cell
-                push!(h, (e, p) => g[electron_ind(e), phonon_ind(p)] *
-                            (ops.n - mean_ne*id(domain(ops.n))) ⊗
-                            (ops.bmin + ops.bplus)
-                        )
+            cp = cell(p)
+            m = phonon_ind(p)
+
+            r = abs(ce - cp)
+
+            g_eff =
+                xi == 0 ? (r == 0 ? g[be,m] : 0) :
+                g[be,m] * exp(-r/xi)
+
+            if abs(g_eff) ≥ thr && g_eff != 0
+                push!(h, (e,p) => g_eff * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus))
             end
         end
     end
