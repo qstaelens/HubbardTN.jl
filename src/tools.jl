@@ -67,7 +67,7 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 """
-    density_spin(ψ::InfiniteMPS, symm::CalcConfig)
+    density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the electron spin density per site in the unit cell.
 """
