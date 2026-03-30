@@ -111,7 +111,7 @@ end
 
 
 """
-    get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute α-coefficients from pair correlators.
 
@@ -121,7 +121,8 @@ Returns `[a0, a01]`, where:
 
 Only onsite and nearest-neighbor terms are included.
 """
-function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+function get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm = calc.symmetries
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
@@ -140,7 +141,7 @@ function get_alpha(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) w
 end
 
 """
-    get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
 
 Compute β-coefficients from density and hopping correlators.
 
@@ -150,7 +151,8 @@ Returns `[b0, b01]`, where:
 
 Only onsite and nearest-neighbor terms are included.
 """
-function get_beta(ψ::InfiniteMPS, symm::SymmetryConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+    symm = calc.symmetries
     ps   = symm.particle_symmetry
     ss   = symm.spin_symmetry
 
