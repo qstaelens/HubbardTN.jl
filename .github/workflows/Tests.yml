@@ -26,7 +26,7 @@ jobs:
           # Option A: derive from subdirectory names under test/
           # groups=$(ls -d test/*/  | xargs -I{} basename {} | jq -R . | jq -sc .)
           # Option B: if your groups are top-level .jl files like test/ONEBAND.jl:
-          groups=$(ls test/*.jl | xargs -I{} basename {} .jl | jq -R . | jq -sc .)
+          groups=$(ls test/*.jl | grep -v 'runtests.jl' | xargs -I{} basename {} .jl | jq -R . | jq -sc .)
           echo "groups=$groups" >> "$GITHUB_OUTPUT"
 
   test:
@@ -34,7 +34,7 @@ jobs:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.group }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+    permissions:
       actions: write
       contents: read
     strategy:
@@ -42,7 +42,7 @@ jobs:
       matrix:
         version:
           - '1.11'
-          # - '1.10' fails with new MAK.jl version
+          - '1.10' # fails with new MAK.jl version
           - 'pre'
         os:
           - ubuntu-latest
