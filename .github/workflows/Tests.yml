@@ -42,7 +42,7 @@ jobs:
       matrix:
         version:
           - '1.11'
-          - '1.10' # fails with new MAK.jl version
+          # - '1.10' # fails with new version (MAK.jl?)
           - 'pre'
         os:
           - ubuntu-latest
