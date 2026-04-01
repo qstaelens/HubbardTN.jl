@@ -287,7 +287,9 @@ function hamiltonian_term(
     B = term.B
     period = bands + boson_modes
 
-    return [(i,) => -B*ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
+    electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
+
+    return [(i,) => -B*ops.Sz for i in electron_sites]
 end
 # Staggered magnetic field term
 function hamiltonian_term(
@@ -302,7 +304,24 @@ function hamiltonian_term(
     period = bands + boson_modes
     phase = (-1) .^ (div.(0:(period*cell_width-1), period))
 
-    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in 1:period*cell_width if (i%period != 0 || period==bands)]
+    electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
+
+    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites]
+end
+# Spin mean field term
+function hamiltonian_term(
+                    term::SpinMeanField, 
+                    ops, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_modes::Int64
+                )
+    J = term.J
+    s = term.spins
+
+    electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
+
+    return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
 end
 # Holstein coupling term
 function hamiltonian_term(
@@ -365,7 +384,7 @@ function hamiltonian_term(
     b0, b01 = beta
 
     period = bands + boson_modes
-    electron_sites = [i for i in 1:period*cell_width if (i%period != 0 || period==bands)]
+    electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
     hopping_onsite = ops.c⁺pair + ops.cpair
     hopping_pair = HubbardOperators.d_plus_u_plus(ComplexF64,Trivial,U1Irrep) + HubbardOperators.u_min_d_min(ComplexF64,Trivial,U1Irrep)
