@@ -45,7 +45,7 @@ function maximal_virtualspace(::Type{SU2Irrep}, ::Type{SU2Irrep}, total_width::I
     return build_virtualspace(FermionParity ⊠ SU2Irrep ⊠ SU2Irrep, (0:1, 0:1//2:3, 0:1//2:3), maxdim)
 end
 
-function initialize_mps(H::InfiniteMPOHamiltonian, symm::SymmetryConfig; max_dimension::Int=50)
+function initialize_mps(H::InfiniteMPOHamiltonian, symm::SymmetryConfig, max_dimension::Int)
     Ps = physicalspace.(parent(H))
 
     # Compute left and right fusion spaces
@@ -66,6 +66,19 @@ function initialize_mps(H::InfiniteMPOHamiltonian, symm::SymmetryConfig; max_dim
 
     return InfiniteMPS(Ps, V_trunc)
 end
+
+function initialize_finite_mps(H::FiniteMPOHamiltonian, symm::SymmetryConfig, max_dimension::Int)
+    sym = fℤ₂ ⊠ symm.particle_symmetry ⊠ symm.spin_symmetry
+
+    left  = Vect[sym]((0, 0, 0) => 1)
+    Ntot = Int(symm.filling * symm.length)
+    right = Vect[sym]((0, Ntot, 0) => 1)
+
+    Ps = physicalspace(H)
+    P = symm.filling === nothing ? 1 : numerator(symm.filling)
+    Vmax = maximal_virtualspace(symm.particle_symmetry, symm.spin_symmetry, length(Ps), max_dimension, P)
+    return FiniteMPS(Ps, Vmax; left=left, right=right)
+end 
 
 
 ####################
@@ -108,40 +121,47 @@ function compute_groundstate(
                 calc::CalcConfig;
                 svalue::Float64=2.0,
                 tol::Float64=1e-8, 
-                init_state::Union{Nothing, InfiniteMPS}=nothing,
+                init_state=nothing,
                 maxiter::Int64=1000,
                 max_init_dim::Int=50,
                 verbosity::Int64=0
             )
-    H = hamiltonian(calc)
-
-    symm = calc.symmetries
-    total_width = calc.hubbard.bands * symm.cell_width
-    ψ₀ = isnothing(init_state) ? initialize_mps(H, symm; max_dimension=max_init_dim) : init_state
-
     schmidtcut = 10.0^(-svalue)
     tol = max(tol, schmidtcut/10)
-    #truncbelow(schmidtcut)
-    if total_width > 1
-        ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))
-    else
-        ψ₀, envs, = find_groundstate(ψ₀, H, VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity))
-        ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=trunctol(; atol=schmidtcut)))
-        χ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
-        for i in 1:maxiter
-            ψ₀, envs = changebonds(ψ₀, H, VUMPSSvdCut(; trscheme=trunctol(; atol=schmidtcut)))
-            ψ₀, = find_groundstate(ψ₀, H, VUMPS(; tol=max(tol, schmidtcut / 10), verbosity=verbosity), envs)
+
+    if calc.symmetries.length === nothing
+        H = hamiltonian(calc)
+        total_width = calc.hubbard.bands * calc.symmetries.cell_width
+        ψ₀ = isnothing(init_state) ? initialize_mps(H, calc.symmetries, max_init_dim) : init_state
+        
+        if total_width > 1
+            ψ₀, envs, = find_groundstate(ψ₀, H, IDMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))
+        else
+            ψ₀, envs, = find_groundstate(ψ₀, H, VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity))
             ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=trunctol(; atol=schmidtcut)))
-            χ′ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
-            isapprox(χ, χ′; rtol=0.05) && break
-            χ = χ′
+            χ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
+            for i in 1:maxiter
+                ψ₀, envs = changebonds(ψ₀, H, VUMPSSvdCut(; trscheme=trunctol(; atol=schmidtcut)))
+                ψ₀, = find_groundstate(ψ₀, H, VUMPS(; tol=max(tol, schmidtcut / 10), verbosity=verbosity), envs)
+                ψ₀ = changebonds(ψ₀, SvdCut(; trscheme=trunctol(; atol=schmidtcut)))
+                χ′ = sum(i -> dim(left_virtualspace(ψ₀, i)), 1:total_width)
+                isapprox(χ, χ′; rtol=0.05) && break
+                χ = χ′
+            end
         end
+        
+        alg = VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity) &
+            GradientGrassmann(; maxiter=maxiter, tol=tol, verbosity=verbosity)
+        ψ, envs, δ = find_groundstate(ψ₀, H, alg)
+
+    elseif calc.symmetries.length !== nothing
+        H = hamiltonian(calc)
+        Hnew = periodic_boundary_conditions(H, calc.symmetries.length)
+        ψ₀ = isnothing(init_state) ? initialize_finite_mps(Hnew, calc.symmetries, max_init_dim) : init_state
+
+        ψ, envs, δ = find_groundstate(ψ₀, Hnew, DMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))
     end
-    
-    alg = VUMPS(; maxiter=maxiter, tol=tol, verbosity=verbosity) &
-        GradientGrassmann(; maxiter=maxiter, tol=tol, verbosity=verbosity)
-    ψ, envs, δ = find_groundstate(ψ₀, H, alg)
-    
+
     return Dict("groundstate" => ψ, "environments" => envs, "ham" => H, "error" => δ)
 end
 

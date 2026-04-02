@@ -28,16 +28,26 @@ unit cell width, and optional filling information.
 struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
     spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
-    cell_width::Int64
+    cell_width::Union{Nothing,Int64}
+    length::Union{Nothing,Int64}
     filling::Union{Nothing,Rational{Int}}
 
     function SymmetryConfig(
-                particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
-                spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
-                cell_width::Int64,
-                filling::Union{Nothing,Rational{Int}}=nothing
-            )
-        @assert cell_width > 0 "Cell width must be a positive integer"
+        particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
+        spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}};
+        cell_width::Union{Nothing,Int64}=nothing,
+        length::Union{Nothing,Int64}=nothing,
+        filling::Union{Nothing,Rational{Int}}=nothing
+    )
+        @assert xor(cell_width === nothing, length === nothing) "Specify exactly one of `cell_width` or `length`."
+
+        if cell_width !== nothing
+            @assert cell_width > 0 "Cell width must be a positive integer"
+        end
+        if length !== nothing
+            @assert length > 0 "Length must be a positive integer"
+            cell_width = length
+        end
 
         if particle_symmetry == U1Irrep
             filling = filling === nothing ? 1//1 : filling
@@ -45,7 +55,7 @@ struct SymmetryConfig
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end
 
-        new(particle_symmetry, spin_symmetry, cell_width, filling)
+        new(particle_symmetry, spin_symmetry, cell_width, length, filling)
     end
 end
 
