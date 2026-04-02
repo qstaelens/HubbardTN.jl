@@ -3,11 +3,11 @@
 ####################
 
 """
-    dim_state(ψ::InfiniteMPS)
+    dim_state(ψ::MPS)
 
-Determine the bond dimensions in an infinite MPS.
+Determine the bond dimensions in an MPS.
 """
-function dim_state(ψ::InfiniteMPS)
+function dim_state(ψ)
     dimension = Int64.(zeros(length(ψ)))
     for i in 1:length(ψ)
         dimension[i] = dim(space(ψ.AL[i],1))
@@ -39,6 +39,17 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
     end
     
     return Ne
+end
+
+function density_e(ψ::FiniteMPS, calc::CalcConfig)
+    chain = FiniteChain(calc.symmetries.length)
+    N = e_number(Float64, calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry)
+    Ntot = @mpoham begin
+        sum(vertices(chain)) do i
+            return N{i}
+        end
+    end
+    return real(expectation_value(ψ, Ntot))/calc.symmetries.length
 end
 
 """
@@ -97,7 +108,7 @@ function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 """
-    calc_ms(ψ::InfiniteMPS, symm::SymmetryConfig)
+    calc_ms(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the staggered magnetization in an InfiniteMPS.
 """

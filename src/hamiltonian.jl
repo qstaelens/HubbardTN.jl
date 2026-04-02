@@ -216,12 +216,11 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? 0 : calc.terms[idx].max_b)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_modes = Int(max_b>0)*length(w)
+    boson_modes = Int(max_b>0) * length(w)
     period = bands + boson_modes
 
-    symm = calc.symmetries
-    ops, spaces = build_ops(symm, bands, max_b, boson_modes)
-    cell_width = symm.cell_width
+    ops, spaces = build_ops(calc.symmetries, bands, max_b, boson_modes)
+    cell_width = calc.symmetries.cell_width
 
     h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(1,) => 0*ops.n]  # Initialize MPO
 
