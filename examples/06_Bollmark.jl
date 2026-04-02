@@ -1,6 +1,5 @@
 using HubbardTN
 using TensorKit, MPSKit
-using Revise
 
 # Step 0: Simple Hubbard model
 particle_symmetry = U1Irrep
@@ -29,8 +28,8 @@ println("Max bond dimension: ", maximum(dim0))
 Ne0 = density_e(ψ0, calc0)
 println("Number of electrons per site: ", Ne0)
 
-spin_gap, spin_k = compute_spingap(gs0, symm)
-pairing_gap, pairing_k = compute_pairing_energy(gs0, symm)
+spin_gap, spin_k = compute_spingap(gs0, calc0)
+pairing_gap, pairing_k = compute_pairing_energy(gs0, calc0)
 println("Spin gap   at k = $(spin_k): Δs = $(spin_gap)")
 println("Pairing gap   at k = $(pairing_k): Δp = $(pairing_gap)")
 

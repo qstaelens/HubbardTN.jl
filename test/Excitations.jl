@@ -22,15 +22,15 @@ filling = 2//3;
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
 
-    gap, kmin = compute_bandgap(gs, symm; resolution=5)
+    gap, kmin = compute_bandgap(gs, calc; resolution=5)
     @test gap >= 0.0
     @test 0.0 <= kmin <= π
 
-    gap, kmin = compute_spingap(gs, symm; resolution=5)
+    gap, kmin = compute_spingap(gs, calc; resolution=5)
     @test gap >= 0.0
     @test 0.0 <= kmin <= π
 
-    gap, kmin = compute_pairing_energy(gs, symm; resolution=5)
+    gap, kmin = compute_pairing_energy(gs, calc; resolution=5)
     @test isreal(gap)
     @test 0.0 <= kmin <= π
 end
@@ -46,11 +46,11 @@ end
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
 
-    gap, kmin = compute_bandgap(gs, symm; resolution=5)
+    gap, kmin = compute_bandgap(gs, calc; resolution=5)
     @test gap >= 0.0
     @test 0.0 <= kmin <= π
 
-    gap, kmin = compute_pairing_energy(gs, symm; resolution=5)
+    gap, kmin = compute_pairing_energy(gs, calc; resolution=5)
     @test isreal(gap)
     @test 0.0 <= kmin <= π
 end
@@ -68,7 +68,7 @@ t = [first(u)/2, 1.0];
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; tol=tol/10)
 
-    gap, kmin = compute_spingap(gs, symm; resolution=5)
+    gap, kmin = compute_spingap(gs, calc; resolution=5)
     @test gap >= 0.0
     @test 0.0 <= kmin <= π
 end

@@ -271,6 +271,32 @@ struct StaggeredField{T<:AbstractFloat} <: AbstractHamiltonianTerm
 end
 
 """
+    SpinMeanField{T<:AbstractFloat} <: AbstractHamiltonianTerm
+
+Represents a mean field coupling term between spins in different chains. 
+
+# Fields
+- `J::T`  
+    Inter-chain Hund's coupling. `J[i,j]` is the coupling between spin-site i in the 
+    current chain and spin-site j in the neighboring chain(s).
+- `spins::Vector{T}`  
+    Input spins from the neighbouring chain(s), should be solved self-consistently. 
+    The vector length should match the number of sites in the unit cell.
+
+# Constructors
+- `SpinMeanField(J, spins)` — creates the term with specified coupling and initial spins.
+"""
+struct SpinMeanField{T<:AbstractFloat} <: AbstractHamiltonianTerm
+    J::Matrix{T}       # Inter-chain Hund's coupling between orbitals
+    spins::Vector{T}   # Mean-field spin values for each orbital in the unit cell
+    function SpinMeanField(J::Matrix{T}, spins::Vector{T}) where {T<:AbstractFloat}
+        @assert size(J, 1) == size(J, 2) "J must be a square matrix"
+        @assert size(J, 1) == length(spins) "Length of spins vector must match dimensions of J"
+        new{T}(J, spins)
+    end
+end
+
+"""
     HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
 Represents Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and `gₐ(nᵢₐ-<n>)(b⁺ⱼ + bⱼ)` in the Hamiltonian.
@@ -397,6 +423,8 @@ struct CalcConfig{
             end
             if term isa HolsteinTerm
                 @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
+            elseif term isa SpinMeanField
+                @assert size(term.J, 1) == bands*symmetries.cell_width "Number of bands in HubbardParams does not match dimensions of J in SpinMeanField"
             end
             if symmetries.filling !== nothing
                 oldf = symmetries.filling
