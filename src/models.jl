@@ -59,7 +59,7 @@ struct SymmetryConfig
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end
 
-        new(particle_symmetry, spin_symmetry, cell_width, length, filling)
+        new(particle_symmetry, spin_symmetry, cell_width, filling, length)
     end
 end
 
