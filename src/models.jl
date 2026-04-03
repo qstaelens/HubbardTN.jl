@@ -37,25 +37,25 @@ struct SymmetryConfig
 
     function SymmetryConfig(
         particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
-        spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}};
+        spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
         cell_width::Union{Nothing,Int64}=nothing,
         filling::Union{Nothing,Rational{Int}}=nothing,
         length::Union{Nothing,Int64}=nothing
     )
         @assert xor(cell_width === nothing, length === nothing) "Specify exactly one of `cell_width` or `length`."
 
-        if cell_width !== nothing
-            @assert cell_width > 0 "Cell width must be a positive integer"
-        end
-        if length !== nothing
-            @assert length > 0 "Length must be a positive integer"
+        if cell_width !== nothing 
+            @assert cell_width > 0 "Cell width must be a positive integer" 
+        end 
+        if length !== nothing 
+            @assert length > 0 "Length must be a positive integer" 
             @assert iseven(length) "length must be even" 
-            cell_width = length
+            cell_width == length
         end
 
         if particle_symmetry == U1Irrep
-            filling = filling === nothing ? 1//1 : filling
-        elseif filling !== nothing
+            filling = isnothing(filling) ? 1//1 : filling
+        elseif !isnothing(filling)
             error("Filling can only be specified when particle symmetry is U1Irrep, but got $(particle_symmetry).")
         end
 
