@@ -50,7 +50,7 @@ struct SymmetryConfig
         if length !== nothing 
             @assert length > 0 "Length must be a positive integer" 
             @assert iseven(length) "length must be even" 
-            cell_width == length
+            cell_width = length
         end
 
         if particle_symmetry == U1Irrep
