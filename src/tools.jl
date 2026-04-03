@@ -53,6 +53,22 @@ function density_e(ψ::FiniteMPS, calc::CalcConfig)
 end
 
 """
+    density_e(ψ::FiniteMPS, calc::CalcConfig)
+
+Compute the number of electrons per site in the chain.
+"""
+function density_e(ψ::FiniteMPS, calc::CalcConfig)
+    chain = FiniteChain(calc.symmetries.length)
+    N = number_e(calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry; filling=calc.symmetries.filling)
+    Ntot = @mpoham begin
+        sum(vertices(chain)) do i
+            return N{i}
+        end
+    end
+    return real(expectation_value(ψ, Ntot))/calc.symmetries.length
+end
+
+"""
     density_b(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the number of bosons per site in the unit cell.
