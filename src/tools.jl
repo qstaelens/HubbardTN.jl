@@ -16,11 +16,13 @@ function dim_state(ψ)
 end
 
 """
-    density_e(ψ::InfiniteMPS, calc::CalcConfig)
+    density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
 
-Compute the number of electrons per site in the unit cell.
+Compute the electron density.
+- For `InfiniteMPS`, returns the density per orbital and per unit-cell position.
+- For `FiniteMPS`, returns the average density over the full chain.
 """
-function density_e(ψ::InfiniteMPS, calc::CalcConfig)
+function density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
     symm = calc.symmetries
     n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
 
@@ -28,33 +30,27 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_modes = (idx === nothing ? 0 : 1)*length(w)
+    boson_modes = (idx === nothing ? 0 : 1) * length(w)
 
-    Ne = zeros(bands, symm.cell_width)
-    for i in 1:bands
-        for j in 1:symm.cell_width
-            site = i+(j-1)*(bands+boson_modes)
-            Ne[i,j] = real(expectation_value(ψ, site => n))
+    if ψ isa InfiniteMPS
+        Ne = zeros(bands, symm.cell_width)
+        for i in 1:bands
+            for j in 1:symm.cell_width
+                site = i + (j - 1) * (bands + boson_modes)
+                Ne[i, j] = real(expectation_value(ψ, site => n))
+            end
         end
-    end
-    
-    return Ne
-end
+        return Ne
 
-"""
-    density_e(ψ::FiniteMPS, calc::CalcConfig)
-
-Compute the number of electrons per site in the chain.
-"""
-function density_e(ψ::FiniteMPS, calc::CalcConfig)
-    chain = FiniteChain(calc.symmetries.length)
-    N = number_e(calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry; filling=calc.symmetries.filling)
-    Ntot = @mpoham begin
-        sum(vertices(chain)) do i
-            return N{i}
+    elseif ψ isa FiniteMPS
+        chain = FiniteChain(symm.length)
+        Ntot = @mpoham begin
+            sum(vertices(chain)) do i
+                n{i}
+            end
         end
+        return real(expectation_value(ψ, Ntot)) / symm.length
     end
-    return real(expectation_value(ψ, Ntot))/calc.symmetries.length
 end
 
 """
