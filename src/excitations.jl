@@ -232,10 +232,10 @@ function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resoluti
         charges_double = [0, 2*d, 0]
     end
 
-    momenta = collect(range(0, 2π, resolution))
+    momenta = collect(range(0, π, resolution))
 
     ex_add = compute_excitations(gs, calc, momenta, charges_particle; nums=1, svalue=svalue)
-    ex_double = compute_excitations(gs, calc, momenta, charges_double; nums=3, svalue=svalue)
+    ex_double = compute_excitations(gs, calc, momenta, charges_double; nums=1, svalue=svalue)
 
     E1 = real.(vec(ex_add["Es"]))
     E2 = real.(vec(ex_double["Es"]))
