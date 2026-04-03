@@ -14,7 +14,9 @@ unit cell width, and optional filling information.
 - `spin_symmetry` : Union{Type{Trivial}, Type{U1Irrep}, Type{SU2Irrep}}
     - The symmetry type for spin degrees of freedom.
 - `cell_width` : Int64
-    - Number of sites in the unit cell. Must be a positive integer. Defaults to 1.
+    - Number of sites in the unit cell of an infinite MPS. Must be a positive integer. Default is nothing.
+- `length` : Int64
+    - Length of the finite MPS. Must be a positive integer. Defaults is nothing.
 - `filling` : Union{Nothing, Rational{Int}}
     - Optional particle filling specified as a rational number `P//Q` (numerator/denominator). Only allowed if `particle_symmetry` is `U1Irrep`.
     Otherwise the filling is determined by the chemical potential.
@@ -22,6 +24,7 @@ unit cell width, and optional filling information.
 # Constructor Behavior
 - If `filling` is provided, the constructor checks that `particle_symmetry == U1Irrep`.
 - `cell_width` must be positive.
+- If 'length' is provided, the constructor checks if length is an even positive number.
 - If `particle_symmetry` is `U1Irrep` and `filling` is specified, the constructor ensures that `cell_width` is a multiple of
   `denominator(filling) * (mod(numerator(filling), 2) + 1)` to accommodate the specified filling.
 """
@@ -29,15 +32,15 @@ struct SymmetryConfig
     particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
     spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}}
     cell_width::Union{Nothing,Int64}
-    length::Union{Nothing,Int64}
     filling::Union{Nothing,Rational{Int}}
+    length::Union{Nothing,Int64}
 
     function SymmetryConfig(
         particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
         spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}};
         cell_width::Union{Nothing,Int64}=nothing,
-        length::Union{Nothing,Int64}=nothing,
-        filling::Union{Nothing,Rational{Int}}=nothing
+        filling::Union{Nothing,Rational{Int}}=nothing,
+        length::Union{Nothing,Int64}=nothing
     )
         @assert xor(cell_width === nothing, length === nothing) "Specify exactly one of `cell_width` or `length`."
 
@@ -46,6 +49,7 @@ struct SymmetryConfig
         end
         if length !== nothing
             @assert length > 0 "Length must be a positive integer"
+            @assert iseven(length) "length must be even" 
             cell_width = length
         end
 

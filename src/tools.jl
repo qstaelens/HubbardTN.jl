@@ -41,9 +41,14 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
     return Ne
 end
 
+"""
+    density_e(ψ::FiniteMPS, calc::CalcConfig)
+
+Compute the number of electrons per site in the chain.
+"""
 function density_e(ψ::FiniteMPS, calc::CalcConfig)
     chain = FiniteChain(calc.symmetries.length)
-    N = e_number(Float64, calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry)
+    N = number_e(calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry; filling=calc.symmetries.filling)
     Ntot = @mpoham begin
         sum(vertices(chain)) do i
             return N{i}
