@@ -39,7 +39,7 @@ struct SymmetryConfig
         particle_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
         spin_symmetry::Union{Type{Trivial},Type{U1Irrep},Type{SU2Irrep}},
         cell_width::Union{Nothing,Int64}=nothing,
-        filling::Union{Nothing,Rational{Int}}=nothing,
+        filling::Union{Nothing,Rational{Int}}=nothing;
         length::Union{Nothing,Int64}=nothing
     )
         @assert xor(cell_width === nothing, length === nothing) "Specify exactly one of `cell_width` or `length`."
