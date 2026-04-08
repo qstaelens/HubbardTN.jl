@@ -158,16 +158,8 @@ function compute_groundstate(
 
     elseif calc.symmetries.length !== nothing
         Hinf = hamiltonian(calc)
-        println(physicalspace(Hinf))
         H = periodic_boundary_conditions(Hinf, calc.symmetries.length)
-        println(physicalspace(H))
-        #t1 = calc.hubbard.t[(1,2)]
-        #U1 = calc.hubbard.U[(1,1,1,1)]
-        #println(t1,U1)
-        #H = hubbard_model(Float64, calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry, FiniteChain(calc.symmetries.length); t = t1, U = U1, mu = U1/2)
         ψ₀ = isnothing(init_state) ? initialize_finite_mps(H, calc.symmetries, max_init_dim) : init_state
-        println(physicalspace(ψ₀))
-        println(summary(ψ₀))
         ψ, envs, δ = find_groundstate(ψ₀, H, DMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))
     end
 

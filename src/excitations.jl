@@ -29,19 +29,6 @@ function compute_excitations(groundstate_dict::Dict{String,Any}, calc::CalcConfi
     trivial_sector = first(sectors(oneunit(physicalspace(H, 1))))
     @assert length(charges) == length(trivial_sector) "Number of charges must match number of symmetries ($(length(trivial_sector)))."
     sector = foldl(⊠, [typeof(f)(charges[i]) for (i, f) in enumerate(trivial_sector)])
-    println(sector)
-
-    folder = "data/excitations"
-    isdir(folder) || mkpath(folder)
-    t_tag = dict_tag(calc.hubbard.t)
-    U_tag = dict_tag(calc.hubbard.U)
-    filename = "exc__$(t_tag)_$(U_tag)_s=$(svalue)_ch=$(join(string.(charges), "_"))_k=$(join(string.(round.(collect(momenta), digits=4)), "_"))_num=$(nums).jld2"
-    filepath = joinpath(folder, filename)
-
-    if isfile(filepath)
-        data = load(filepath)
-        return Dict("Es" => data["Es"], "qps" => nothing, "momenta" => data["momenta"])
-    end
 
     Es, qps = excitations(H, QuasiparticleAnsatz(solver, MPSKit.Defaults.alg_environments(;dynamic_tols=false)), momenta./length(H), ψ, envs; num=nums, sector=sector)
     @save filepath Es momenta charges svalue
@@ -126,8 +113,7 @@ function compute_bandgap(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int
 
     ex_add = compute_excitations(gs, calc, momenta, charges_particle; nums=1, svalue=svalue)
     ex_rem = compute_excitations(gs, calc, momenta, charges_hole; nums=1, svalue=svalue)
-    println(ex_add["Es"])
-    println(ex_rem["Es"])
+    
     Eb = ex_add["Es"] .+ ex_rem["Es"]
     gap, k = findmin(real.(Eb[:,1]))
     return gap, momenta[k]
@@ -160,7 +146,7 @@ function compute_spingap(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int
     momenta = collect(range(0, π, resolution))
     ex = compute_excitations(gs, calc, momenta, charges; nums=1, svalue=svalue)
     Es = ex["Es"]
-    println("Es, $Es")
+    
     gap, k = findmin(real.(Es[:,1]))
     return gap, momenta[k]
 end
@@ -196,9 +182,8 @@ function compute_chargegap(gs::Dict{String,Any}, calc::CalcConfig; resolution::I
 
     ex_add = compute_excitations(gs, calc, momenta, charges_particle; nums=1, svalue=svalue)
     ex_rem = compute_excitations(gs, calc, momenta, charges_hole; nums=1, svalue=svalue)
-
     Ec = 0.5 .* (ex_add["Es"] .+ ex_rem["Es"])
-    println("Ec, $Ec")
+    
     gap, k = findmin(real.(Ec[:,1]))
     return gap, momenta[k]
 end
@@ -239,9 +224,6 @@ function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resoluti
 
     E1 = real.(vec(ex_add["Es"]))
     E2 = real.(vec(ex_double["Es"]))
-
-    println("E1 = $E1")
-    println("E2 = $E2")
 
     E1min = minimum(E1)
     idx_E1mins = findall(x -> isapprox(x, E1min; atol=tol), E1)
