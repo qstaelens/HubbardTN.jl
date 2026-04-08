@@ -31,7 +31,6 @@ function compute_excitations(groundstate_dict::Dict{String,Any}, calc::CalcConfi
     sector = foldl(⊠, [typeof(f)(charges[i]) for (i, f) in enumerate(trivial_sector)])
 
     Es, qps = excitations(H, QuasiparticleAnsatz(solver, MPSKit.Defaults.alg_environments(;dynamic_tols=false)), momenta./length(H), ψ, envs; num=nums, sector=sector)
-    @save filepath Es momenta charges svalue
     return Dict("Es" => Es, "qps" => qps, "momenta" => momenta)
 end
 
@@ -183,7 +182,7 @@ function compute_chargegap(gs::Dict{String,Any}, calc::CalcConfig; resolution::I
     ex_add = compute_excitations(gs, calc, momenta, charges_particle; nums=1, svalue=svalue)
     ex_rem = compute_excitations(gs, calc, momenta, charges_hole; nums=1, svalue=svalue)
     Ec = 0.5 .* (ex_add["Es"] .+ ex_rem["Es"])
-    
+
     gap, k = findmin(real.(Ec[:,1]))
     return gap, momenta[k]
 end
