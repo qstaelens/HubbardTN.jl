@@ -19,7 +19,7 @@ Compute the low-lying quasiparticle excitations above a given ground state.
 # Returns
 A dictionary with the following keys:
 - `"Es"`: Eigenenergies of the excitations.
-- `"qps"`: Quasiparticle ansatz states, or `nothing` if the data were loaded from disk.
+- `"qps"`: Quasiparticle ansatz states.
 - `"momenta"`: The input momentum values.
 """
 function compute_excitations(groundstate_dict::Dict{String,Any}, calc::CalcConfig, momenta::Union{Float64,Vector{Float64}}, charges::Union{Vector{Int64},Vector{Float64}}; nums::Int64=1, svalue::Float64=0.0, solver=Arnoldi(;krylovdim=30,tol=1e-6,eager=true))
@@ -44,7 +44,7 @@ Compute domain-wall excitations between a ground state and a spatially shifted v
 - `momenta::Union{Float64,Vector{Float64}}`: Momentum value or collection of momentum values at which domain-wall excitations are evaluated.
 - `charges::Union{Vector{Int64},Vector{Float64}}`: Target quantum numbers defining the excitation sector, with one value per symmetry sector.
 - `nums::Int64=1`: Number of excitations to compute per momentum.
-- `shift::Int64=1`: Number of lattice sites by which to shift the reference ground state to form the domain wall.
+- `shift::Int64=1`: The number of lattice sites by which to shift the reference ground state to form the domain wall.
 - `solver`: The eigensolver used for diagonalization (default is `Arnoldi(; krylovdim=30, tol=1e-6, eager=true)`).
 
 # Returns
@@ -54,7 +54,7 @@ A dictionary with the following keys:
 - `"momenta"`: The input momentum values.
 
 # Notes
-This function constructs the shifted ground state and its environments automatically using `circshift` and `environments`.
+This function constructs the second "shifted" ground state and its environments automatically using `circshift` and `environments`.
 It then computes excitations between the two MPS states within the specified symmetry sector.
 """
 function compute_domainwall(
@@ -182,7 +182,7 @@ function compute_chargegap(gs::Dict{String,Any}, calc::CalcConfig; resolution::I
     ex_add = compute_excitations(gs, calc, momenta, charges_particle; nums=1, svalue=svalue)
     ex_rem = compute_excitations(gs, calc, momenta, charges_hole; nums=1, svalue=svalue)
     Ec = 0.5 .* (ex_add["Es"] .+ ex_rem["Es"])
-
+    
     gap, k = findmin(real.(Ec[:,1]))
     return gap, momenta[k]
 end
