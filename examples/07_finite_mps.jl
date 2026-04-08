@@ -22,7 +22,6 @@ H = gs["ham"]
 
 E0 = expectation_value(ψ, H)
 E = sum(real(E0)) / length(H)
-push!(energies, E)
 println("Groundstate energy: ", E)
 dim = dim_state(ψ)
 println("Max bond dimension: ", maximum(dim))

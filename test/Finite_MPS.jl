@@ -1,6 +1,3 @@
-using HubbardTN
-using TensorKit, MPSKit
-
 tol = 1e-2
 
 s = 2.5
