@@ -11,3 +11,4 @@ docs/site/
 /data/
 /examples/*_QS.jl
 /examples/*_QS_2.jl
+/src/*_QS.jl
