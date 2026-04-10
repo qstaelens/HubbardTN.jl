@@ -138,7 +138,7 @@ function compute_groundstate(
     H = hamiltonian(calc)
     total_width = calc.hubbard.bands * calc.symmetries.cell_width
 
-    if finite_mps === true
+    if finite_mps
         H = periodic_boundary_conditions(H, total_width)
         ψ₀ = isnothing(init_state) ? initialize_mps(H, calc; max_dimension=max_init_dim) : init_state
         ψ, envs, δ = find_groundstate(ψ₀, H, DMRG2(; maxiter=maxiter, trscheme=trunctol(; atol=schmidtcut), tol=tol, verbosity=verbosity))

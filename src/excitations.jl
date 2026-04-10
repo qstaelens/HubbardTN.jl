@@ -167,7 +167,7 @@ function compute_spingap(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int
 end
 
 """
-    compute_chargegap(gs, symm; resolution=5)
+    compute_chargegap(gs, calc; resolution=5)
 
 Compute the charge gap from two-particle addition excitations on a uniform momentum grid.
 
