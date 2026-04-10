@@ -221,7 +221,7 @@ Compute the pairing energy from single-particle and two-particle addition excita
 # Returns
 - `(gap, kmin)`: The minimum value of `2E_add(k) - E_double(k)` over the sampled momenta and the corresponding momentum `k`.
 """
-function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int64=5)
+function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resolution::Int64=5, tol::Float64=1e-6)
     @assert calc.symmetries.particle_symmetry == U1Irrep "Particle symmetry must be of type U1Irrep."
 
     d = denominator(calc.symmetries.filling)

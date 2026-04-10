@@ -10,4 +10,4 @@ docs/site/
 # Ignore all data files
 /data/
 /examples/*_QS*.jl
-/src/*_QS.jl
+/src/*_QS*.jl
