@@ -7,11 +7,11 @@ spin_symmetry = U1Irrep
 t = Dict((1,2)=>1.0, (2,1)=>1.0, (1,1)=>2.0)
 U = Dict((1,1,1,1) => 4.0)
 cell_width = 2
-L = 12
+bands = 1
 
 @testset "Compare infinite with finite MPS" begin
     symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width)
-    model = HubbardParams(1, t, U)
+    model = HubbardParams(bands, t, U)
     calc = CalcConfig(symm, model)
     gs = compute_groundstate(calc; svalue=s)
     ψ = gs["groundstate"]
@@ -20,10 +20,10 @@ L = 12
     E0 = expectation_value(ψ, H)
     Einf = sum(real(E0)) / length(H)
 
-    symm = SymmetryConfig(particle_symmetry, spin_symmetry; length = L)
+    symm = SymmetryConfig(particle_symmetry, spin_symmetry, cell_width*6)
     calc = CalcConfig(symm, model)
 
-    gs = compute_groundstate(calc; svalue=s)
+    gs = compute_groundstate(calc; svalue=s, finite_mps = true)
     ψ = gs["groundstate"]
     H = gs["ham"]
 
@@ -37,7 +37,7 @@ L = 12
     println("Number of electrons per site: ", Ne)
     @test Ne ≈ 1.0 atol=tol
 
-    ent = entanglement_spectrum(ψ, Int(L/2))
+    ent = entanglement_spectrum(ψ, Int(bands*cell_width/2))
     println("Entanglement spectrum: \n")
     display(ent)
 end

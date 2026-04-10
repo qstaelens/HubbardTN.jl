@@ -3,11 +3,11 @@
 ####################
 
 """
-    dim_state(ψ::MPS)
+    dim_state(ψ::Union{InfiniteMPS,FiniteMPS})
 
 Determine the bond dimensions in an MPS.
 """
-function dim_state(ψ)
+function dim_state(ψ::Union{InfiniteMPS,FiniteMPS})
     dimension = Int64.(zeros(length(ψ)))
     for i in 1:length(ψ)
         dimension[i] = dim(space(ψ.AL[i],1))
@@ -16,13 +16,12 @@ function dim_state(ψ)
 end
 
 """
-    density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
+    density_e(ψ::InfiniteMPS, calc::CalcConfig)
 
 Compute the electron density.
-- For `InfiniteMPS`, returns the density per orbital and per unit-cell position.
-- For `FiniteMPS`, returns the average density over the full chain.
+- Returns the density per orbital and per unit-cell position.
 """
-function density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
+function density_e(ψ::InfiniteMPS, calc::CalcConfig)
     symm = calc.symmetries
     n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
 
@@ -32,25 +31,37 @@ function density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
     w = (idx === nothing ? [] : calc.terms[idx].w)
     boson_modes = (idx === nothing ? 0 : 1) * length(w)
 
-    if ψ isa InfiniteMPS
-        Ne = zeros(bands, symm.cell_width)
-        for i in 1:bands
-            for j in 1:symm.cell_width
-                site = i + (j - 1) * (bands + boson_modes)
-                Ne[i, j] = real(expectation_value(ψ, site => n))
-            end
+    Ne = zeros(bands, symm.cell_width)
+    for i in 1:bands
+        for j in 1:symm.cell_width
+            site = i + (j - 1) * (bands + boson_modes)
+            Ne[i, j] = real(expectation_value(ψ, site => n))
         end
-        return Ne
-
-    elseif ψ isa FiniteMPS
-        chain = FiniteChain(symm.length)
-        Ntot = @mpoham begin
-            sum(vertices(chain)) do i
-                n{i}
-            end
-        end
-        return real(expectation_value(ψ, Ntot)) / symm.length
     end
+    return Ne
+end
+
+"""
+    density_e(ψ::FiniteMPS, calc::CalcConfig)
+
+Compute the electron density.
+- Returns the average density over the full chain.
+"""
+function density_e(ψ::FiniteMPS, calc::CalcConfig)
+    symm = calc.symmetries
+    n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
+
+    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
+    w = (idx === nothing ? [] : calc.terms[idx].w)
+    boson_modes = (idx === nothing ? 0 : 1) * length(w)
+
+    chain = FiniteChain(calc.hubbard.bands*symm.cell_width)
+    Ntot = @mpoham begin
+        sum(vertices(chain)) do i
+            n{i}
+        end
+    end
+    return real(expectation_value(ψ, Ntot)) / (calc.hubbard.bands*symm.cell_width)
 end
 
 """
@@ -197,13 +208,13 @@ For a 2-band model, returns `[b00, b01, b10, b11]`.
 
 Only onsite and nearest-neighbor terms are included.
 """
-function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where {T<:AbstractFloat}
+function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, E::T) where {T<:AbstractFloat}
     symm  = calc.symmetries
     ps    = symm.particle_symmetry
     ss    = symm.spin_symmetry
     bands = calc.hubbard.bands
 
-    @assert Ep != 0 "Ep must be nonzero"
+    @assert E != 0 "E must be nonzero"
 
     if bands == 1
         n   = number_e(ps, ss)
@@ -211,20 +222,26 @@ function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where 
         c   = c_plusmin(ps, ss)
         c01 = real(expectation_value(ψ, (1,2) => c))
 
-        b01 = 2 * 4 * tz^2 * c01 / Ep
-        b0  = 2 * 4 * tz^2 * c0  / Ep
+        b01 = 2 * 4 * tz^2 * c01 / E
+        b0  = 2 * 4 * tz^2 * c0  / E
 
         return [b0, b01]
 
     elseif bands == 2
-        c00 = real(expectation_value(ψ, (1,3) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
-        c01 = real(expectation_value(ψ, (1,2) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
-        c11 = real(expectation_value(ψ, (2,4) => HubbardOperators.u_plus_u_min(ComplexF64, ps, ss)))
+        c00 = real(expectation_value(ψ, (1,3) => c_plusmin_up(ComplexF64, ps, ss)))
+        c01 = real(expectation_value(ψ, (1,2) => c_plusmin_up(ComplexF64, ps, ss)))
+        c10 = real(expectation_value(ψ, (2,1) => c_plusmin_up(ComplexF64, ps, ss)))
+        c11 = real(expectation_value(ψ, (2,4) => c_plusmin_up(ComplexF64, ps, ss)))
 
-        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / Ep
-        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / Ep
-        b10 = (4 * tz^2 * c01) / Ep
-        b01 = (4 * tz^2 * c10) / Ep
+        println("c00 = ", c00)
+        println("c01 = ", c01)
+        println("c10 = ", c10)
+        println("c11 = ", c11)
+
+        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / E
+        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / E
+        b10 = (4 * tz^2 * c01) / E
+        b01 = (4 * tz^2 * c10) / E
 
         return [b00, b01, b10, b11]
 

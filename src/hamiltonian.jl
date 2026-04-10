@@ -377,31 +377,100 @@ function hamiltonian_term(
                     boson_modes::Int64
                 )
 
-    alpha = term.alpha
-    a0, a01 = alpha[1], alpha[2]
-    beta = term.beta
-    b0, b01 = beta
-
     period = bands + boson_modes
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    hopping_onsite = ops.c⁺pair + ops.cpair
-    hopping_pair = HubbardOperators.d_plus_u_plus(ComplexF64,Trivial,U1Irrep) + HubbardOperators.u_min_d_min(ComplexF64,Trivial,U1Irrep)
+    if hasproperty(ops, :cpair)
+        hopping_onsite = ops.c⁺pair + ops.cpair
+        hopping_pair = HubbardOperators.d_plus_u_plus(ComplexF64,Trivial,U1Irrep) + HubbardOperators.u_min_d_min(ComplexF64,Trivial,U1Irrep)
+    end
 
-    h = Any[(i,) => -a0*hopping_onsite for i in electron_sites]
+    if bands == 1
+        a0, a01 = term.alpha
+        b0, b01 = term.beta
+    elseif bands == 2
+        a0, a1, a00, a01, a10, a11 = term.alpha
+        b00, b01, b10, b11 = term.beta
+    else
+        @error Other number of bands is not implemented
+    end
+    
+    h = Any[]
 
-    h = append!(h, [
-        (electron_sites[n], electron_sites[n+1]) => -a01*hopping_pair
-        for n in 1:(length(electron_sites)-1)
-    ])
-    h = append!(h, [
-        (electron_sites[n], electron_sites[n+1]) => b01*ops.c⁺c
-        for n in 1:(length(electron_sites)-1)
-    ])
-    h = append!(h, [
-        (electron_sites[n+1], electron_sites[n]) => b01*ops.c⁺c
-        for n in 1:(length(electron_sites)-1)
-    ])
+    if bands ==1
+        if hasproperty(ops, :cpair)
+            append!(h, [
+                (i,) => -a0 * hopping_onsite
+                for i in electron_sites
+            ])
 
-    return h
+            h = append!(h, [
+                (electron_sites[n], electron_sites[n+1]) => -a01*hopping_pair
+                for n in 1:(length(electron_sites)-1)
+            ])
+            h = append!(h, [
+                (electron_sites[n+1], electron_sites[n]) => -a01*hopping_pair
+                for n in 1:(length(electron_sites)-1)
+            ])
+        end
+        h = append!(h, [
+            (electron_sites[n+1], electron_sites[n]) => b01*ops.c⁺c
+            for n in 1:(length(electron_sites)-1)
+        ])
+        h = append!(h, [
+            (electron_sites[n], electron_sites[n+1]) => b01*ops.c⁺c
+            for n in 1:(length(electron_sites)-1)
+        ])
+        return h
+    end
+
+    if bands == 2
+        if hasproperty(ops, :cpair)
+            @assert a0 == a1 
+            append!(h, [
+                (i,) => -a0 * hopping_onsite
+                for i in electron_sites
+            ])
+            @assert a01 == a10
+            h = append!(h, [
+                (1, 2) => -a01*hopping_pair
+            ])
+            h = append!(h, [
+                (2, 1) => -a01*hopping_pair
+            ])
+            h = append!(h, [
+                (1, 3) => -a00*hopping_pair
+            ])
+            h = append!(h, [
+                (3, 1) => -a00*hopping_pair
+            ])
+            h = append!(h, [
+                (2, 4) => -a11*hopping_pair
+            ])
+            h = append!(h, [
+                (4, 2) => -a11*hopping_pair
+            ])
+        end
+        @assert b01 == b10
+        h = append!(h, [
+            (1, 2) => b01*ops.c⁺c
+        ])
+        h = append!(h, [
+            (2, 1) => b01*ops.c⁺c
+        ])
+        h = append!(h, [
+            (1, 3) => b00*ops.c⁺c
+        ])
+        h = append!(h, [
+            (3, 1) => b00*ops.c⁺c
+        ])
+        h = append!(h, [
+            (2, 4) => b11*ops.c⁺c
+        ])
+        h = append!(h, [
+            (4, 2) => b11*ops.c⁺c
+        ])
+
+        return h
+    end
 end

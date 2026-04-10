@@ -39,4 +39,4 @@ println("Ground-state energy density: ", expectation_value(ψ, H) / length(H))
 # Step 4: Compute first excitations
 momenta = collect(range(0, 2π, length = 10))
 charges = [0.0, 0.0, 0.0]
-ex = compute_excitations(gs, calc, momenta, charges)
+ex = compute_excitations(gs, momenta, charges)
