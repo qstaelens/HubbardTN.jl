@@ -59,7 +59,7 @@ function initialize_mps(H::InfiniteMPOHamiltonian, calc::CalcConfig; max_dimensi
     V = TensorKit.infimum.(V_left, V_right)
 
     # Construct maximal symmetry-allowed virtual space
-    P = symm.filling === nothing ? 1 : numerator(symm.filling)
+    P = calc.symmetries.filling === nothing ? 1 : numerator(calc.symmetries.filling)
     Vmax = maximal_virtualspace(calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry, length(Ps), max_dimension, P)
 
     V_trunc = TensorKit.infimum.(V, fill(Vmax, length(V)))
