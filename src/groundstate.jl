@@ -136,7 +136,7 @@ function compute_groundstate(
     schmidtcut = 10.0^(-svalue)
     tol = max(tol, schmidtcut/10)
     H = hamiltonian(calc)
-    total_width = calc.hubbard.bands * calc.symmetries.cell_width
+    total_width = length(H)
 
     if finite_mps
         H = periodic_boundary_conditions(H, total_width)
