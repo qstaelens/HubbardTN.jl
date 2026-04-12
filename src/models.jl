@@ -263,26 +263,32 @@ end
 """
     SpinMeanField{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
-Represents a mean field coupling term between spins in different chains. 
+Mean-field coupling term representing inter-chain spin interactions.
 
 # Fields
-- `J::T`  
-    Inter-chain Hund's coupling. `J[i,j]` is the coupling between spin-site i in the 
-    current chain and spin-site j in the neighboring chain(s).
-- `spins::Vector{T}`  
-    Input spins from the neighbouring chain(s), should be solved self-consistently. 
-    The vector length should match the number of sites in the unit cell.
+- `J::Matrix{T}`: Inter-chain coupling matrix of size NxN, where J[i,j] couples site i
+  in the current chain to site j in neighboring chains.
+- `spins::Union{Vector{T}, Matrix{T}}`: Expected spin expectation values from neighboring chains.
+    - **Collinear**: A `Vector{T}` of length N containing z-components.
+    - **Noncollinear**: A `Matrix{T}` of size Nx3 containing (x, y, z) components.
 
 # Constructors
-- `SpinMeanField(J, spins)` — creates the term with specified coupling and initial spins.
+- `SpinMeanField(J, spins)`: Creates the term with specified coupling and initial spins.
 """
 struct SpinMeanField{T<:AbstractFloat} <: AbstractHamiltonianTerm
-    J::Matrix{T}       # Inter-chain Hund's coupling between orbitals
-    spins::Vector{T}   # Mean-field spin values for each orbital in the unit cell
+    J::Matrix{T}
+    spins::Union{Vector{T}, Matrix{T}}
+
     function SpinMeanField(J::Matrix{T}, spins::Vector{T}) where {T<:AbstractFloat}
-        @assert size(J, 1) == size(J, 2) "J must be a square matrix"
-        @assert size(J, 1) == length(spins) "Length of spins vector must match dimensions of J"
-        new{T}(J, spins)
+        @assert size(J, 1) == size(J, 2) "Coupling matrix J must be square."
+        @assert size(J, 1) == length(spins) "Number of sites in J must match length of spins vector."
+        return new{T}(J, spins)
+    end
+    function SpinMeanField(J::Matrix{T}, spins::Matrix{T}) where {T<:AbstractFloat}
+        @assert size(J, 1) == size(J, 2) "Coupling matrix J must be square."
+        @assert size(spins, 2) == 3 "Noncollinear spins matrix must have exactly 3 columns (x, y, z)."
+        @assert size(J, 1) == size(spins, 1) "Number of sites in J must match number of rows in spins matrix."
+        return new{T}(J, spins)
     end
 end
 
@@ -414,7 +420,7 @@ struct CalcConfig{
             if term isa HolsteinTerm
                 @assert size(term.g, 1) == bands "Number of bands in HubbardParams does not match number of bands in HolsteinTerm"
             elseif term isa SpinMeanField
-                @assert size(term.J, 1) == bands*symmetries.cell_width "Number of bands in HubbardParams does not match dimensions of J in SpinMeanField"
+                @assert size(term.J, 1) == bands*symmetries.cell_width "Number of (electron) sites in cell does not match dimensions of J in SpinMeanField"
             end
             if symmetries.filling !== nothing
                 oldf = symmetries.filling

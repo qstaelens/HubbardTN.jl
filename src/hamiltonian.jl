@@ -176,6 +176,9 @@ function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int
     if ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
     end
+    if ss === Trivial
+        ops = merge(ops, (Sx = Sx(ps, ss; filling=fill), Sy = Sy(ps, ss; filling=fill)))
+    end
     if ps === Trivial
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
     end
@@ -321,7 +324,11 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+    if length(size(s)) == 1
+        return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+    else
+        return [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
+    end
 end
 # Holstein coupling term
 function hamiltonian_term(
