@@ -170,7 +170,6 @@ function get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where
         a0  = 2 * 4 * ty * tz * c0  / Ep
 
         return [a0, a01]
-
     elseif bands == 2
         c0 = real(expectation_value(ψ, 1 => Δ))
         c1 = real(expectation_value(ψ, 2 => Δ))
@@ -185,7 +184,6 @@ function get_alpha(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, Ep::T) where
         a1 = 2 * (ty^2 * c0 + 2 * tz^2 * c1) / Ep
 
         return [a0, a1, a00, a01, a01, a11]
-
     else
         error("get_alpha is only implemented for 1-band and 2-band models, got bands = $bands")
     end
@@ -226,7 +224,6 @@ function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, E::T) where {
         b0  = 2 * 4 * tz^2 * c0  / E
 
         return [b0, b01]
-
     elseif bands == 2
         c00 = real(expectation_value(ψ, (1,3) => c_plusmin_up(ComplexF64, ps, ss)))
         c01 = real(expectation_value(ψ, (1,2) => c_plusmin_up(ComplexF64, ps, ss)))
@@ -244,7 +241,6 @@ function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, E::T) where {
         b01 = (4 * tz^2 * c10) / E
 
         return [b00, b01, b10, b11]
-
     else
         error("get_beta is only implemented for 1-band and 2-band models, got bands = $bands")
     end
@@ -290,14 +286,13 @@ function density_correlations(ψ::InfiniteMPS, calc::CalcConfig; R::Int=15, thr:
         C[r] = real(expectation_value(ψ, (1, sr) => nn) - (expectation_value(ψ, (1) => n) * expectation_value(ψ, (sr) => n)))
         println("r=$(r-1)  C[r]=$(C[r])")
 
-        if abs(C[r]) < 1e-10
+        if abs(C[r]) < thr
             println("Correlation below threshold at r=$r → stopping.")
             C = C[1:r]   
         break
         end
     end
 end
-
 
 
 ##########
@@ -386,9 +381,11 @@ end
 compact_float(x::Real) = replace(rstrip(rstrip(string(x), '0'), '.'), "-0" => "0")
 
 """
-Construct a canonical string tag from a hopping/interaction dictionary.
+    dict_tag(d::Dict)
+
+Returns a canonical string tag from a hopping/interaction dictionary for saving.
 """
-function dict_tag(d::Dict; step::Float64 = 1e-4)
+function dict_tag(d::Dict)
     pairs = sort(collect(d); by = first)
     parts = String[]
 
@@ -403,17 +400,13 @@ function dict_tag(d::Dict; step::Float64 = 1e-4)
         elseif k isa Tuple && length(k) == 4
             # interaction: U_ijkl, canonicalize symmetry
             i, j, l, m = k
-
             if (i, j, l, m) > (j, i, m, l)
                 i, j, l, m = j, i, m, l
             end
-
             if (i, j) > (l, m)
                 i, j, l, m = l, m, i, j
             end
-
             push!(parts, "U$(i)$(j)$(l)$(m)_" * compact_float(v))
-
         else
             error("Unsupported key in dict_tag: $k")
         end
