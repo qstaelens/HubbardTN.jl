@@ -100,20 +100,24 @@ end
 Compute the ground state of the Hamiltonian defined by the CalcConfig `calc`.
 
 # Keyword Arguments
-- `svalue::Float64=2.0`: 
-    Exponent used to define the truncation cutoff as `10^(-svalue)` for Schmidt value truncation.
-- `tol::Float64=1e-8`: 
-    Convergence tolerance for iterative solvers (used by VUMPS or IDMRG2).
-- `init_state::Union{Nothing, InfiniteMPS, FiniteMPS}=nothing`: 
+- `svalue::Float64=2.0`:
+    Exponent controlling the Schmidt value truncation cutoff: tensors with Schmidt
+    values below `10^(-svalue)` are discarded.
+- `tol::Float64=1e-8`:
+    Requested convergence tolerance for the iterative solver (VUMPS or IDMRG2).
+    **Important:** `tol` is automatically floored to `schmidtcut / 10`
+    (i.e. `10^(-(svalue+1))`), so values tighter than that threshold have no
+    effect.  In practice, set `svalue` first and let `tol` follow.
+- `init_state::Union{Nothing, InfiniteMPS, FiniteMPS}=nothing`:
     Optional initial MPS. If `finite_mps=false`, expects an `InfiniteMPS`; if `true`, a `FiniteMPS`.
-- `maxiter::Int=1000`: 
+- `maxiter::Int=1000`:
     Maximum number of iterations for ground state optimization.
-- `max_init_dim::Int=50`: 
+- `max_init_dim::Int=50`:
     Maximum bond dimension for the initial MPS construction.
-- `verbosity::Int=0`: 
+- `verbosity::Int=0`:
     Controls the level of printed output from the solver.
-- `finite_mps::Bool=false`: 
-    If `true`, performs a finite-size DMRG calculation with periodic boundary conditions; 
+- `finite_mps::Bool=false`:
+    If `true`, performs a finite-size DMRG calculation with periodic boundary conditions;
     otherwise uses infinite algorithms (VUMPS/IDMRG).
 
 # Returns
@@ -221,6 +225,11 @@ end
                             verbosity::Int64=0)
                             
 Find the chemical potential μ that yields the desired filling in the ground state.
+
+!!! note
+    This function is only implemented for `Trivial` particle symmetry, where the
+    filling is not fixed by the symmetry sector.  For `U1Irrep` particle symmetry,
+    set the target filling directly via `SymmetryConfig`.
 """
 function find_chemical_potential(
                 calc::CalcConfig, 
