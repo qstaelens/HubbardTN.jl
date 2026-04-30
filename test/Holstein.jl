@@ -6,6 +6,36 @@ println("""
 
 tol = 1e-1
 
+@testset "HolsteinTerm constructor validation" begin
+    w = [1.0]
+    g = [1.0;;]
+
+    # max_b must be positive
+    @test_throws ArgumentError HolsteinTerm(w, g, 0, 1.0)
+
+    # g columns must match length of w
+    @test_throws ArgumentError HolsteinTerm(w, [1.0 2.0], 5, 1.0)
+
+    # xi must be non-negative
+    @test_throws ArgumentError HolsteinTerm(w, g, 5, 1.0; xi=-1.0)
+
+    # threshold must be non-negative
+    @test_throws ArgumentError HolsteinTerm(w, g, 5, 1.0; threshold=-1e-4)
+
+    # xi > 0 requires a positive threshold
+    @test_throws ArgumentError HolsteinTerm(w, g, 5, 1.0; xi=2.0)
+
+    # valid non-local constructor
+    term = HolsteinTerm(w, g, 5, 1.0; xi=2.0, threshold=1e-4)
+    @test term.xi == 2.0
+    @test term.threshold == 1e-4
+
+    # valid local constructor (defaults)
+    term_local = HolsteinTerm(w, g, 5, 1.0)
+    @test term_local.xi == 0.0
+    @test term_local.threshold == 0.0
+end
+
 E_ref = -1.2713317702997016
 
 @testset "Hubbard–Holstein: g = 0, ω₀ > 0" begin

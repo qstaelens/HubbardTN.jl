@@ -295,45 +295,57 @@ end
 """
     HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
-Represents Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and `gₐ(nᵢₐ-<n>)(b⁺ⱼ + bⱼ)` in the Hamiltonian.
-The coupling may be local (`i=j`) or exponentially decaying with distance `exp(-rᵢⱼ/ξ)`. Couplings smaller than `threshold` are neglected.
+Represents Holstein-type electron–phonon coupling terms `w b⁺ᵢ bᵢ` and
+`gₐ(nᵢₐ-<n>)(b⁺ⱼ + bⱼ)` in the Hamiltonian.  The coupling may be local
+(`i=j`) or exponentially decaying with distance `exp(-rᵢⱼ/ξ)`.  Couplings
+smaller than `threshold` are neglected.
 
 # Fields
 - `w::Vector{T}`  
-    Local phonon frequency.
+    Local phonon frequencies (one per mode).
 - `g::Matrix{T}`  
-    Electron–phonon coupling strength per phonon and per band, size = (bands, nmodes).
+    Electron–phonon coupling strengths, size `(bands, nmodes)`.
 - `max_b::Int64`  
-    Maximum number of phonons allowed per mode.
+    Maximum number of phonons allowed per mode (Fock-space truncation).
 - `mean_ne::T`  
-    Mean number of electrons in Hubbard model.
+    Mean number of electrons per site in the bare Hubbard model, used to
+    normal-order the density operator.
 - `xi::T`  
-    Exponential decay length of the nonlocal coupling.
+    Exponential decay length for non-local coupling (`0` means strictly local).
 - `threshold::T`  
-    Minimum coupling strength retained in the Hamiltonian.
+    Minimum coupling magnitude retained in the Hamiltonian; smaller values are
+    dropped for efficiency.
 
-# Constructors
-- `HolsteinTerm(w, g, max_b, mean_ne)` — local Holstein coupling.
-- `HolsteinTerm(w, g, max_b, mean_ne, xi, threshold)` — exponentially decaying nonlocal Holstein coupling.
+# Constructor
+    HolsteinTerm(w, g, max_b, mean_ne; xi=zero(T), threshold=zero(T))
+
+All arguments are positional except `xi` and `threshold`, which are keyword
+arguments with default `0`.  Pass `xi > 0` together with a positive
+`threshold` to enable exponentially decaying non-local coupling.
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
-    w::Vector{T}                
-    g::Matrix{T}                
-    max_b::Int64                
-    mean_ne::T                  
-    xi::T                       
+    w::Vector{T}
+    g::Matrix{T}
+    max_b::Int64
+    mean_ne::T
+    xi::T
     threshold::T
 
-    function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T) where {T<:AbstractFloat}
-        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
-        @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
-        new{T}(w, g, max_b, mean_ne, zero(T), zero(T))
-    end
-    function HolsteinTerm(w::Vector{T}, g::Matrix{T}, max_b::Int64, mean_ne::T, xi::T, threshold::T) where {T<:AbstractFloat}
-        @assert max_b > 0 "Max allowed number of phonons must be a positive integer"
-        @assert size(g,2) == length(w) "w and g must have the same length (number of phonon modes)"
-        @assert xi > 0 "xi must be positive"
-        @assert threshold ≥ zero(T) "threshold must be nonnegative"
+    function HolsteinTerm(
+                w::Vector{T},
+                g::Matrix{T},
+                max_b::Int64,
+                mean_ne::T;
+                xi::T=zero(T),
+                threshold::T=zero(T)
+            ) where {T<:AbstractFloat}
+        max_b > 0 || throw(ArgumentError("max_b must be a positive integer, got $max_b."))
+        size(g, 2) == length(w) || throw(ArgumentError(
+            "Number of columns of g ($(size(g,2))) must equal length of w ($(length(w)))."))
+        xi >= zero(T) || throw(ArgumentError("xi must be non-negative, got $xi."))
+        threshold >= zero(T) || throw(ArgumentError("threshold must be non-negative, got $threshold."))
+        xi == zero(T) || threshold > zero(T) || throw(ArgumentError(
+            "A positive threshold is required when xi > 0 to avoid retaining negligibly small long-range couplings."))
         new{T}(w, g, max_b, mean_ne, xi, threshold)
     end
 end

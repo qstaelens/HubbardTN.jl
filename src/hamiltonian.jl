@@ -399,7 +399,7 @@ function hamiltonian_term(
         a0, a1, a00, a01, a10, a11 = term.alpha
         b00, b01, b10, b11 = term.beta
     else
-        @error Other number of bands is not implemented
+        error("Bollmark term: only 1-band and 2-band models are implemented, got bands = $bands.")
     end
     
     h = Any[]
@@ -439,44 +439,20 @@ function hamiltonian_term(
                 for i in electron_sites
             ])
             @assert a01 == a10
-            h = append!(h, [
-                (1, 2) => -a01*hopping_pair
-            ])
-            h = append!(h, [
-                (2, 1) => -a01*hopping_pair
-            ])
-            h = append!(h, [
-                (1, 3) => -a00*hopping_pair
-            ])
-            h = append!(h, [
-                (3, 1) => -a00*hopping_pair
-            ])
-            h = append!(h, [
-                (2, 4) => -a11*hopping_pair
-            ])
-            h = append!(h, [
-                (4, 2) => -a11*hopping_pair
-            ])
+            h = append!(h, [(1, 2) => -a01*hopping_pair])
+            h = append!(h, [(2, 1) => -a01*hopping_pair])
+            h = append!(h, [(1, 3) => -a00*hopping_pair])
+            h = append!(h, [(3, 1) => -a00*hopping_pair])
+            h = append!(h, [(2, 4) => -a11*hopping_pair])
+            h = append!(h, [(4, 2) => -a11*hopping_pair])
         end
         @assert b01 == b10
-        h = append!(h, [
-            (1, 2) => b01*ops.c⁺c
-        ])
-        h = append!(h, [
-            (2, 1) => b01*ops.c⁺c
-        ])
-        h = append!(h, [
-            (1, 3) => b00*ops.c⁺c
-        ])
-        h = append!(h, [
-            (3, 1) => b00*ops.c⁺c
-        ])
-        h = append!(h, [
-            (2, 4) => b11*ops.c⁺c
-        ])
-        h = append!(h, [
-            (4, 2) => b11*ops.c⁺c
-        ])
+        h = append!(h, [(1, 2) => b01*ops.c⁺c])
+        h = append!(h, [(2, 1) => b01*ops.c⁺c])
+        h = append!(h, [(1, 3) => b00*ops.c⁺c])
+        h = append!(h, [(3, 1) => b00*ops.c⁺c])
+        h = append!(h, [(2, 4) => b11*ops.c⁺c])
+        h = append!(h, [(4, 2) => b11*ops.c⁺c])
 
         return h
     end

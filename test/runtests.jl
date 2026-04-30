@@ -41,8 +41,8 @@ ti = time()
     if GROUP == "ALL" || GROUP == "HOLSTEIN"
         @time include("Holstein.jl")
     end
-    if GROUP == "ALL" || GROUP == "Finite MPS"
-        @time include("Finite_mps.jl")
+    if GROUP == "ALL" || GROUP == "FINITEMPS"
+        @time include("FiniteMPS.jl")
     end
 end
 
