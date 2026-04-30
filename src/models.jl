@@ -322,15 +322,6 @@ smaller than `threshold` are neglected.
 All arguments are positional except `xi` and `threshold`, which are keyword
 arguments with default `0`.  Pass `xi > 0` together with a positive
 `threshold` to enable exponentially decaying non-local coupling.
-
-# Examples
-```julia
-# Local Holstein coupling (single mode, single band)
-HolsteinTerm([1.0], [1.5;;], 10, 1.0)
-
-# Non-local Holstein coupling with decay length ξ = 2 and cutoff 1e-4
-HolsteinTerm([1.0], [1.5;;], 10, 1.0; xi=2.0, threshold=1e-4)
-```
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
     w::Vector{T}
