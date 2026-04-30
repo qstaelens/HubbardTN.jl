@@ -42,7 +42,7 @@ ti = time()
         @time include("Holstein.jl")
     end
     if GROUP == "ALL" || GROUP == "FINITEMPS"
-        @time include("Finite_MPS.jl")
+        @time include("FiniteMPS.jl")
     end
 end
 
