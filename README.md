@@ -11,3 +11,15 @@ after which it can be used by loading
 ```
 julia> using HubbardTN
 ```
+
+Minimal example:
+```julia
+using HubbardTN, TensorKit
+
+symm = SymmetryConfig(U1Irrep, SU2Irrep, 2, 1//1)
+model = HubbardParams([0.0, 1.0], [4.0])
+calc = CalcConfig(symm, model)
+
+gs = compute_groundstate(calc)
+energy_density = real(expectation_value(gs["groundstate"], gs["ham"])) / length(gs["groundstate"])
+```
