@@ -10,7 +10,7 @@ tol = 1e-2
     @test_throws ArgumentError CalcConfig(
         SymmetryConfig(U1Irrep, SU2Irrep, 3, 1//2),
         HubbardParams([0.0, 1.0], [4.0]),
-        MagneticField(0.1)
+        (MagneticField(0.1),)
     )
     @test_throws ArgumentError HubbardParams([0.0 1.0; 1.0 0.0], [1.0 2.0 3.0])
 end
