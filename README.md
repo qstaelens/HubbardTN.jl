@@ -12,7 +12,7 @@ after which it can be used by loading
 julia> using HubbardTN
 ```
 
-Minimal example:
+Minimal example for the Hubbard model with U/t=4:
 ```julia
 using HubbardTN, TensorKit
 
