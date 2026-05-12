@@ -69,13 +69,28 @@ end
 
 function initialize_mps(H::FiniteMPOHamiltonian, calc::CalcConfig; max_dimension::Int=50)
     sym = fℤ₂ ⊠ calc.symmetries.particle_symmetry ⊠ calc.symmetries.spin_symmetry
-    P = numerator(calc.symmetries.filling)
-    Q = denominator(calc.symmetries.filling)
 
-    left  = Vect[sym]((0, 0, 0) => 1)
-    Nphys = Int(calc.symmetries.filling * calc.hubbard.bands * calc.symmetries.cell_width)
-    Nshift = Q*Nphys - P * calc.hubbard.bands * calc.symmetries.cell_width   
-    right = Vect[sym]((0, Nshift, 0) => 1)
+    use_ps = calc.symmetries.particle_symmetry!=Trivial
+    use_ss = calc.symmetries.spin_symmetry!=Trivial
+    charges_left = [0]
+    charges_right = [0]
+
+    if use_ps 
+        P = numerator(calc.symmetries.filling)
+        Q = denominator(calc.symmetries.filling)
+        Nphys = Int(calc.symmetries.filling * calc.hubbard.bands * calc.symmetries.cell_width)
+        Nshift = Q*Nphys - P * calc.hubbard.bands * calc.symmetries.cell_width
+        push!(charges_left, 0)
+        push!(charges_right, Nshift)
+    end
+    if use_ss
+        P = 0
+        push!(charges_left, 0)
+        push!(charges_right, 0)
+    end
+
+    left  = Vect[sym](Tuple(charges_left) => 1) 
+    right = Vect[sym](Tuple(charges_right) => 1)
 
     Ps = physicalspace(H)
     Vmax = maximal_virtualspace(calc.symmetries.particle_symmetry, calc.symmetries.spin_symmetry, length(Ps), max_dimension, P)
