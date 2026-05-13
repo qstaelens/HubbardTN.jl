@@ -176,6 +176,9 @@ function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int
     if ss !== SU2Irrep
         ops = merge(ops, (Sz = Sz(ps, ss; filling=fill),))
     end
+    if ss === Trivial
+        ops = merge(ops, (Sx = Sx(ps, ss; filling=fill), Sy = Sy(ps, ss; filling=fill)))
+    end
     if ps === Trivial
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
     end
@@ -244,10 +247,21 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
 
     # --- Extra terms ---
     for term in calc.terms
-        h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_modes))
+        if !(term isa HolsteinTerm)
+            h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_modes))
+        end
     end
 
-    return InfiniteMPOHamiltonian(spaces, h...)
+    H = InfiniteMPOHamiltonian(spaces, h...)
+
+    # --- Holstein coupling ---
+    for term in calc.terms
+        if term isa HolsteinTerm
+            H = H + holstein_mpo(term, ops, spaces, cell_width, bands, boson_modes)
+        end
+    end
+
+    return H
 end
 
 # Three-body interaction term
@@ -320,12 +334,51 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+    if length(size(s)) == 1
+        return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+    else
+        return [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
+    end
 end
+
+function exponential_mpo(spaces, sites, O, λ::Number)
+    @assert abs(λ) < 1 "|λ| < 1 is required for convergence."
+
+    (i, j), (L, R) = MPSKit.instantiate_operator(spaces, (sites => O))
+
+    T = scalartype(O)
+    S = sectortype(space(O, 1))
+    Vphys = typeof(space(O, 1))
+    V0 = typeof(left_virtualspace(R))(one(S) => 1)
+    V = SumSpace(V0, left_virtualspace(R), V0)
+
+    Ws = map(eachindex(spaces)) do site
+        W = MPSKit.jordanmpotensortype(Vphys, T)(
+            undef,
+            V ⊗ spaces[site] ← spaces[site] ⊗ V
+        )
+
+        W[2, 1, 1, 2] = λ * BraidingTensor{T}(eachspace(W)[2, 1, 1, 2])
+
+        if site == mod1(i, length(spaces))
+            W[1, 1, 1, 2] = L
+        end
+
+        if site == mod1(j, length(spaces))
+            W[2, 1, 1, 3] = R
+        end
+
+        return W
+    end
+
+    return InfiniteMPOHamiltonian(Ws)
+end
+
 # Holstein coupling term
-function hamiltonian_term(
+function holstein_mpo(
         term::HolsteinTerm,
         ops,
+        spaces,
         cell_width::Int64,
         bands::Int64,
         boson_modes::Int64
@@ -335,7 +388,6 @@ function hamiltonian_term(
     g = term.g
     mean_ne = term.mean_ne
     xi = term.xi
-    thr = term.threshold
 
     period = bands + boson_modes
 
@@ -345,7 +397,9 @@ function hamiltonian_term(
     phonon_ind(i) = mod1(i, period) - bands
     cell(i) = div(i-1, period)
 
-    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w[phonon_ind(i)] * ops.nb for i in phonon_sites]
+    H_ph = InfiniteMPOHamiltonian(spaces, [(i,) => w[phonon_ind(i)] * ops.nb for i in phonon_sites]...)
+
+    H_ep = 0 * H_ph
 
     for e in electron_sites
         ce = cell(e)
@@ -353,21 +407,35 @@ function hamiltonian_term(
         for p in phonon_sites
             cp = cell(p)
             m = phonon_ind(p)
+            if ce == cp
+                println(e,p,g[be,m])
+                O_ep = g[be, m] * (ops.n - mean_ne * id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus)
 
-            r = abs(ce - cp)
+                if term.xi == 0.0 #Local coupling term
+                    H_ep += InfiniteMPOHamiltonian(spaces, (e,p) => O_ep)
 
-            g_eff =
-                xi == 0 ? (r == 0 ? g[be,m] : 0) :
-                g[be,m] * exp(-r/xi)
+                else # Exponential profile as coupling between electrons and phonons
+                    α = term.xi
+                    K = 1
 
-            if abs(g_eff) ≥ thr && g_eff != 0
-                push!(h, (e,p) => g_eff * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus))
+                    cs, λs_phys, err = inv_power_expsum(α, K)
+                    norm = sum(cs)   # because f(0) = sum_k c_k
+                    cs ./= norm
+                    λs_mps = sqrt.(λs_phys) # Convert physical-cell decay to MPS-site decay.
+
+                    @info "Created exponential fit for non-local Holstein coupling" cs=cs λs=λs_phys err=err
+
+                    for (c, λ) in zip(cs, λs_mps)
+                        H_ep += exponential_mpo(spaces,(e, p), c * O_ep, λ)
+                    end
+                end
             end
         end
     end
 
-    return h
+    return H_ph + H_ep    
 end
+
 # Bollmark term
 function hamiltonian_term(
                     term::Bollmark, 
@@ -392,7 +460,7 @@ function hamiltonian_term(
         a0, a1, a00, a01, a10, a11 = term.alpha
         b00, b01, b10, b11 = term.beta
     else
-        @error Other number of bands is not implemented
+        error("Bollmark term: only 1-band and 2-band models are implemented, got bands = $bands.")
     end
     
     h = Any[]
@@ -432,44 +500,20 @@ function hamiltonian_term(
                 for i in electron_sites
             ])
             @assert a01 == a10
-            h = append!(h, [
-                (1, 2) => -a01*hopping_pair
-            ])
-            h = append!(h, [
-                (2, 1) => -a01*hopping_pair
-            ])
-            h = append!(h, [
-                (1, 3) => -a00*hopping_pair
-            ])
-            h = append!(h, [
-                (3, 1) => -a00*hopping_pair
-            ])
-            h = append!(h, [
-                (2, 4) => -a11*hopping_pair
-            ])
-            h = append!(h, [
-                (4, 2) => -a11*hopping_pair
-            ])
+            h = append!(h, [(1, 2) => -a01*hopping_pair])
+            h = append!(h, [(2, 1) => -a01*hopping_pair])
+            h = append!(h, [(1, 3) => -a00*hopping_pair])
+            h = append!(h, [(3, 1) => -a00*hopping_pair])
+            h = append!(h, [(2, 4) => -a11*hopping_pair])
+            h = append!(h, [(4, 2) => -a11*hopping_pair])
         end
         @assert b01 == b10
-        h = append!(h, [
-            (1, 2) => b01*ops.c⁺c
-        ])
-        h = append!(h, [
-            (2, 1) => b01*ops.c⁺c
-        ])
-        h = append!(h, [
-            (1, 3) => b00*ops.c⁺c
-        ])
-        h = append!(h, [
-            (3, 1) => b00*ops.c⁺c
-        ])
-        h = append!(h, [
-            (2, 4) => b11*ops.c⁺c
-        ])
-        h = append!(h, [
-            (4, 2) => b11*ops.c⁺c
-        ])
+        h = append!(h, [(1, 2) => b01*ops.c⁺c])
+        h = append!(h, [(2, 1) => b01*ops.c⁺c])
+        h = append!(h, [(1, 3) => b00*ops.c⁺c])
+        h = append!(h, [(3, 1) => b00*ops.c⁺c])
+        h = append!(h, [(2, 4) => b11*ops.c⁺c])
+        h = append!(h, [(4, 2) => b11*ops.c⁺c])
 
         return h
     end
