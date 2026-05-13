@@ -423,7 +423,10 @@ function holstein_mpo(
                     cs ./= norm
                     λs_mps = sqrt.(λs_phys) # Convert physical-cell decay to MPS-site decay.
 
-                    @info "Created exponential fit for non-local Holstein coupling" cs=cs λs=λs_phys err=err
+                    @info "Created exponential fit for non-local Holstein coupling" 
+                    println("cs = ", cs)
+                    println("λs = ", λs_phys)
+                    println("err = ", err)
 
                     for (c, λ) in zip(cs, λs_mps)
                         H_ep += exponential_mpo(spaces,(e, p), c * O_ep, λ)
