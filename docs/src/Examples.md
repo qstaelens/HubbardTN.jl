@@ -2,9 +2,10 @@
 
 This page demonstrates how to use **HubbardTN** to build and solve different 1D Hubbard models using tensor networks.
 
-Two examples are provided:
+Three examples are provided:
 1. A **minimal single-band Hubbard model**
 2. A **general multi-band Hubbard model**
+3. A **Hubbard model with a Holstein term**
 
 ---
 
@@ -110,6 +111,52 @@ ex = compute_excitations(gs, momenta, charges)
   - Indices larger than the number of bands refer to orbitals in neighboring unit cells.
 - This flexible formulation allows the user to specify *arbitrary band connectivity* and *interaction structure*.
 - Beyond the usual on-site interactions, exchange or other couplings can be included naturally.
+
+---
+
+## 🎵 Hubbard–Holstein Model
+
+The example below adds a single Holstein phonon mode to a single-band Hubbard model.
+
+```julia
+using HubbardTN
+using TensorKit, MPSKit
+
+# Step 1: Define the symmetries (no particle-number symmetry — filling set by μ)
+symm = SymmetryConfig(Trivial, U1Irrep, 2)
+
+# Step 2: Set up model parameters
+t = [2.0, 1.0]   # [chemical_potential, nn_hopping]
+U = [4.0]        # [on-site interaction]
+
+w = [1.0]        # phonon frequency (one per mode)
+g = [1.0;;]      # electron–phonon coupling, size (bands, nmodes)
+max_b = 4        # Fock-space truncation: at most 4 phonons per site
+
+model = HubbardParams(t, U)
+calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
+
+# Step 3: Compute the ground state
+gs = compute_groundstate(calc; svalue = 3.0)
+ψ = gs["groundstate"]
+H = gs["ham"]
+
+println("Ground-state energy density: ", sum(real(expectation_value(ψ, H))) / length(H))
+println("Mean phonon number: ", sum(density_b(ψ, calc)) / length(ψ))
+```
+
+### Notes
+
+- `HolsteinTerm(w, g, max_b, mean_ne)` constructs a **local** Holstein coupling.
+- To use an **exponentially decaying non-local** coupling pass `xi` (decay length) and
+  `threshold` (minimum coupling retained) as keyword arguments:
+
+  ```julia
+  HolsteinTerm(w, g, max_b, 1.0; xi=2.0, threshold=1e-4)
+  ```
+
+  `xi > 0` requires a positive `threshold` to avoid retaining negligibly small
+  long-range couplings.
 
 ---
 

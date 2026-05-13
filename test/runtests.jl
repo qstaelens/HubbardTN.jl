@@ -35,11 +35,14 @@ ti = time()
     if GROUP == "ALL" || GROUP == "STAGGEREDFIELD"
         @time include("StaggeredField.jl")
     end
+    if GROUP == "ALL" || GROUP == "SPINFIELD"
+        @time include("SpinField.jl")
+    end
     if GROUP == "ALL" || GROUP == "HOLSTEIN"
         @time include("Holstein.jl")
     end
-    if GROUP == "ALL" || GROUP == "Finite MPS"
-        @time include("Finite_mps.jl")
+    if GROUP == "ALL" || GROUP == "FINITEMPS"
+        @time include("FiniteMPS.jl")
     end
 end
 

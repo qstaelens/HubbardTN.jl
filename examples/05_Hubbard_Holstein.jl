@@ -18,6 +18,12 @@ max_b = 4
 model = HubbardParams(t, U)
 calc  = CalcConfig(symm, model, HolsteinTerm(w, g, max_b, 1.0))
 
+# To use exponentially decaying non-local electron–phonon coupling, pass
+# xi (decay length) and threshold (minimum coupling retained) as keyword
+# arguments:
+#
+#   HolsteinTerm(w, g, max_b, 1.0; xi=2.0, threshold=1e-4)
+
 # Step 3: Compute the ground state
 gs = compute_groundstate(calc; svalue = 3.0)
 ψ = gs["groundstate"]
