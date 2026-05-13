@@ -32,6 +32,7 @@ jobs:
             | tr '[:lower:]' '[:upper:]' \
             | tr -d '_' \
             | jq -R . | jq -sc .)
+          echo "groups=$groups" >> "$GITHUB_OUTPUT"
 
   test:
     needs: discover
