@@ -217,6 +217,78 @@ function c_minplus_down(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, sp
 end
 
 """
+    c_plusmin_updown(T, particle_symmetry, spin_symmetry)
+
+Two-site spin-flip hopping operator c†_{1,↑} c_{2,↓}.
+Only allowed when spin symmetry is Trivial.
+"""
+c_plusmin_updown(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_plusmin_updown(ComplexF64, P, S; kwargs...)
+function c_plusmin_updown(T::Type{<:Number}, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
+    t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
+    P = numerator(filling)
+    Q = denominator(filling)
+    I = sectortype(t)
+    # local single-particle degeneracy ordering:
+    # 1 = ↑, 2 = ↓
+    # |0,↓> -> |↑,0>
+    t[(I(1, Q-P), I(0, -P), dual(I(0, -P)), dual(I(1, Q-P)))][1, 1, 1, 2] = 1
+    # |0,↑↓> -> - |↑,↑>
+    t[(I(1, Q-P), I(1, Q-P), dual(I(0, -P)), dual(I(0, 2Q-P)))][1, 1, 1, 1] = -1
+    # |↓,↓> -> - |↑↓,0>
+    t[(I(0, 2Q-P), I(0, -P), dual(I(1, Q-P)), dual(I(1, Q-P)))][1, 1, 2, 2] = -1
+    # |↓,↑↓> -> |↑↓,↑>
+    t[(I(0, 2Q-P), I(1, Q-P), dual(I(1, Q-P)), dual(I(0, 2Q-P)))][1, 1, 2, 1] = 1
+    return t
+end
+
+"""
+    c_minplus_updown(T, particle_symmetry, spin_symmetry)
+
+Two-site reverse spin-flip hopping operator c†_{2,↓} c_{1,↑}.
+This is the adjoint of c†_{1,↑} c_{2,↓}.
+"""
+c_minplus_updown(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_minplus_updown(ComplexF64, P, S; kwargs...)
+function c_minplus_updown(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return copy(adjoint(c_plusmin_updown(T, particle_symmetry, spin_symmetry; kwargs...)))
+end
+
+"""
+    c_plusmin_downup(T, particle_symmetry, spin_symmetry)
+
+Two-site spin-flip hopping operator c†_{1,↓} c_{2,↑}.
+Only allowed when spin symmetry is Trivial.
+"""
+c_plusmin_downup(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_plusmin_downup(ComplexF64, P, S; kwargs...)
+function c_plusmin_downup(T::Type{<:Number}, ::Type{U1Irrep}, ::Type{Trivial}; filling::Rational{Int}=1//1)
+    t = two_site_operator(T, U1Irrep, Trivial; filling=filling)
+    P = numerator(filling)
+    Q = denominator(filling)
+    I = sectortype(t)
+    # local single-particle degeneracy ordering:
+    # 1 = ↑, 2 = ↓
+    # |0,↑> -> |↓,0>
+    t[(I(1, Q-P), I(0, -P), dual(I(0, -P)), dual(I(1, Q-P)))][2, 1, 1, 1] = 1
+    # |0,↑↓> -> |↓,↓>
+    t[(I(1, Q-P), I(1, Q-P), dual(I(0, -P)), dual(I(0, 2Q-P)))][2, 2, 1, 1] = 1
+    # |↑,↑> -> |↑↓,0>
+    t[(I(0, 2Q-P), I(0, -P), dual(I(1, Q-P)), dual(I(1, Q-P)))][1, 1, 1, 1] = 1
+    # |↑,↑↓> -> |↑↓,↓>
+    t[(I(0, 2Q-P), I(1, Q-P), dual(I(1, Q-P)), dual(I(0, 2Q-P)))][1, 2, 1, 1] = 1
+    return t
+end
+
+"""
+    c_minplus_downup(T, particle_symmetry, spin_symmetry)
+
+Two-site reverse spin-flip hopping operator c†_{2,↑} c_{1,↓}.
+This is the adjoint of c†_{1,↓} c_{2,↑}.
+"""
+c_minplus_downup(P::Type{<:Sector}, S::Type{<:Sector}; kwargs...) = c_minplus_downup(ComplexF64, P, S; kwargs...)
+function c_minplus_downup(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector}; kwargs...)
+    return copy(adjoint(c_plusmin_downup(T, particle_symmetry, spin_symmetry; kwargs...)))
+end
+
+"""
     c_plusmin(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
 
 Return the two-body operator that creates a particle at the first site and annihilates a particle at the second.
