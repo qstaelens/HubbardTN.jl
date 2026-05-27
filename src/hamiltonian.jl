@@ -178,6 +178,7 @@ function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int
     end
     if ss === Trivial
         ops = merge(ops, (Sx = Sx(ps, ss; filling=fill), Sy = Sy(ps, ss; filling=fill)))
+        ops = merge(ops, (c⁺c_ud = c_plusmin_updown(ps, ss; filling=fill), c⁺c_du = c_plusmin_downup(ps, ss; filling=fill)))
     end
     if ps === Trivial
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
@@ -401,35 +402,50 @@ function holstein_mpo(
 
     H_ep = 0 * H_ph
 
+    # Precompute non-local exponential fit for a power-law
+    if term.xi != 0.0
+        K = 1
+        cs, λs, err = inv_power_expsum(term.xi, K)
+
+        while err ≥ term.threshold
+            K += 1
+            cs, λs, err = inv_power_expsum(term.xi, K)
+        end
+
+        cs = real.(cs)
+        cs ./= sum(cs)
+        λs = real.(λs)
+
+        @info "Created exponential fit for non-local Holstein coupling" K=K err=err
+        println("cs = ", cs)
+        println("λs = ", λs)
+    end
+
     for e in electron_sites
         ce = cell(e)
         be = electron_ind(e)
         for p in phonon_sites
             cp = cell(p)
             m = phonon_ind(p)
-            if ce == cp
-                println(e,p,g[be,m])
-                O_ep = g[be, m] * (ops.n - mean_ne * id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus)
+            O_e = g[be, m] * (ops.n - mean_ne * id(domain(ops.n)))
+            O_p = ops.bmin + ops.bplus
+            O_ep = O_e ⊗ O_p
 
-                if term.xi == 0.0 #Local coupling term
-                    H_ep += InfiniteMPOHamiltonian(spaces, (e,p) => O_ep)
+            if term.xi == 0.0 # Pure local Holstein coupling
+                if ce == cp
+                    H_ep += InfiniteMPOHamiltonian(spaces, (e, p) => O_ep)
+                end
+            else # Nonlocal Holstein coupling in terms of exponentials
+                if ce == cp
+                    println(e,p,g[be,m])
+                    for (c, λ) in zip(cs, λs)
+                        H_ep += exponential_mpo(spaces, (e, p), c * O_ep, λ^2)
+                    end
 
-                else # Exponential profile as coupling between electrons and phonons
-                    α = term.xi
-                    K = 1
-
-                    cs, λs_phys, err = inv_power_expsum(α, K)
-                    norm = sum(cs)   # because f(0) = sum_k c_k
-                    cs ./= norm
-                    λs_mps = sqrt.(λs_phys) # Convert physical-cell decay to MPS-site decay.
-
-                    @info "Created exponential fit for non-local Holstein coupling" 
-                    println("cs = ", cs)
-                    println("λs = ", λs_phys)
-                    println("err = ", err)
-
-                    for (c, λ) in zip(cs, λs_mps)
-                        H_ep += exponential_mpo(spaces,(e, p), c * O_ep, λ)
+                elseif abs(ce - cp) == 1
+                    println(e,p,g[be,m])
+                    for (c, λ) in zip(cs, λs)
+                        H_ep += exponential_mpo(spaces, (e, p), c * λ * O_ep, λ^2)
                     end
                 end
             end
@@ -461,7 +477,7 @@ function hamiltonian_term(
         b0, b01 = term.beta
     elseif bands == 2
         a0, a1, a00, a01, a10, a11 = term.alpha
-        b00, b01, b10, b11 = term.beta
+        b00, b01, b10, b11, b00_ud, b01_ud, b10_ud, b11_ud = term.beta
     else
         error("Bollmark term: only 1-band and 2-band models are implemented, got bands = $bands.")
     end
@@ -517,6 +533,13 @@ function hamiltonian_term(
         h = append!(h, [(3, 1) => b00*ops.c⁺c])
         h = append!(h, [(2, 4) => b11*ops.c⁺c])
         h = append!(h, [(4, 2) => b11*ops.c⁺c])
+
+        h = append!(h, [(1, 2) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+        h = append!(h, [(2, 1) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+        h = append!(h, [(1, 3) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+        h = append!(h, [(3, 1) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+        h = append!(h, [(2, 4) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+        h = append!(h, [(4, 2) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
 
         return h
     end

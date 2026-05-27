@@ -235,12 +235,27 @@ function get_beta(ψ::InfiniteMPS, calc::CalcConfig, ty::T, tz::T, E::T) where {
         println("c10 = ", c10)
         println("c11 = ", c11)
 
-        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / E
-        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / E
-        b10 = (4 * tz^2 * c01) / E
-        b01 = (4 * tz^2 * c10) / E
+        c00_ud = real(expectation_value(ψ, (1,3) => c_plusmin_updown(ComplexF64, ps, ss)))
+        c01_ud  = real(expectation_value(ψ, (1,2) => c_plusmin_updown(ComplexF64, ps, ss)))
+        c10_ud  = real(expectation_value(ψ, (2,1) => c_plusmin_updown(ComplexF64, ps, ss)))
+        c11_ud  = real(expectation_value(ψ, (2,4) => c_plusmin_updown(ComplexF64, ps, ss)))
 
-        return [b00, b01, b10, b11]
+        println("c00_ud = ", c00_ud)
+        println("c01_ud = ", c01_ud)
+        println("c10_ud = ", c10_ud)
+        println("c11_ud = ", c11_ud)
+
+        b00 = 2 * (ty^2 * c11 + 2 * tz^2 * c00) / E
+        b01 = (4 * tz^2 * c10) / E
+        b10 = (4 * tz^2 * c01) / E
+        b11 = 2 * (ty^2 * c00 + 2 * tz^2 * c11) / E
+
+        b00_ud = 2 * (ty^2 * c11_ud + 2 * tz^2 * c00_ud) / E
+        b01_ud = (4 * tz^2 * c10_ud) / E
+        b10_ud = (4 * tz^2 * c01_ud) / E
+        b11_ud = 2 * (ty^2 * c00_ud + 2 * tz^2 * c11_ud) / E
+
+        return [b00, b01, b10, b11, b00_ud, b01_ud, b10_ud, b11_ud]
     else
         error("get_beta is only implemented for 1-band and 2-band models, got bands = $bands")
     end
