@@ -344,14 +344,81 @@ end
 
 function exponential_mpo(spaces, sites, O, λ::Number)
     @assert abs(λ) < 1 "|λ| < 1 is required for convergence."
+    println(spaces)
+    println(sites)
 
     (i, j), (L, R) = MPSKit.instantiate_operator(spaces, (sites => O))
 
+    println(R)
+
     T = scalartype(O)
     S = sectortype(space(O, 1))
+    println(S)
     Vphys = typeof(space(O, 1))
     V0 = typeof(left_virtualspace(R))(one(S) => 1)
+    println(V0)
     V = SumSpace(V0, left_virtualspace(R), V0)
+    println(V)
+    println(' ')
+
+    Ws = map(eachindex(spaces)) do site
+        W = MPSKit.jordanmpotensortype(Vphys, T)(
+            undef,
+            V ⊗ spaces[site] ← spaces[site] ⊗ V
+        )
+
+        W[2, 1, 1, 2] = λ * BraidingTensor{T}(eachspace(W)[2, 1, 1, 2])
+
+        if site == mod1(i, length(spaces))
+            W[1, 1, 1, 2] = L
+        end
+
+        if site == mod1(j, length(spaces))
+            W[2, 1, 1, 3] = R
+        end
+
+        return W
+    end
+
+    return InfiniteMPOHamiltonian(Ws)
+end
+
+function exponential_mpo(spaces, sites, L, R, λ::Number)
+    @assert abs(λ) < 1 "|λ| < 1 is required for convergence."
+
+    N = length(spaces)
+    i, j = sites
+
+    println(spaces)
+
+    #(i, j), (L, R) = MPSKit.instantiate_operator(spaces, (sites => O))
+    println(L)
+    println(R)
+
+    T = scalartype(R)
+    S = sectortype(space(R, 1))
+    println(S)
+    Vphys = typeof(space(R, 1))
+    V0 = typeof(left_virtualspace(R))(one(S) => 1)
+    println(V0)
+    V = SumSpace(V0, left_virtualspace(R), V0)
+    println(V)
+    println(' ')
+
+    ref_sites = (i, mod1(i + 1, N))
+    println(ref_sites)
+    O_ref = L ⊗ id(spaces[ref_sites[2]])
+    (_, _), (_, R_ref) = MPSKit.instantiate_operator(spaces, (ref_sites => O_ref))
+    println(R_ref)
+
+    # Extract canonical Vbond from the reference nn call
+    Vbond = left_virtualspace(R_ref)   # always well-shaped: V_phonon, dim 7
+    V0    = typeof(Vbond)(one(S) => 1)
+    V     = SumSpace(V0, Vbond, V0)
+
+    println(V0)
+    println(V)
+    println(' ')
 
     Ws = map(eachindex(spaces)) do site
         W = MPSKit.jordanmpotensortype(Vphys, T)(
@@ -445,7 +512,7 @@ function holstein_mpo(
                 elseif abs(ce - cp) == 1
                     println(e,p,g[be,m])
                     for (c, λ) in zip(cs, λs)
-                        H_ep += exponential_mpo(spaces, (e, p), c * λ * O_ep, λ^2)
+                        H_ep += exponential_mpo(spaces, (e, p), O_e, c * λ * O_p, λ^2)
                     end
                 end
             end
@@ -477,7 +544,11 @@ function hamiltonian_term(
         b0, b01 = term.beta
     elseif bands == 2
         a0, a1, a00, a01, a10, a11 = term.alpha
-        b00, b01, b10, b11, b00_ud, b01_ud, b10_ud, b11_ud = term.beta
+        if hasproperty(ops, :c⁺c_ud)
+            b00, b01, b10, b11, b00_ud, b01_ud, b10_ud, b11_ud = term.beta
+        else
+            b00, b01, b10, b11 = term.beta
+        end
     else
         error("Bollmark term: only 1-band and 2-band models are implemented, got bands = $bands.")
     end
@@ -534,12 +605,15 @@ function hamiltonian_term(
         h = append!(h, [(2, 4) => b11*ops.c⁺c])
         h = append!(h, [(4, 2) => b11*ops.c⁺c])
 
-        h = append!(h, [(1, 2) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
-        h = append!(h, [(2, 1) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
-        h = append!(h, [(1, 3) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
-        h = append!(h, [(3, 1) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
-        h = append!(h, [(2, 4) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
-        h = append!(h, [(4, 2) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+        if hasproperty(ops, :c⁺c_ud)
+            @assert b01_ud == b10_ud
+            h = append!(h, [(1, 2) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+            h = append!(h, [(2, 1) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+            h = append!(h, [(1, 3) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+            h = append!(h, [(3, 1) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+            h = append!(h, [(2, 4) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+            h = append!(h, [(4, 2) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+        end
 
         return h
     end
