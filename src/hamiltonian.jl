@@ -407,7 +407,7 @@ function holstein_mpo(
     H_ep = 0 * H_ph
 
     # Precompute non-local exponential fit for a power-law
-    if term.xi != 0.0
+    if term.xi != Inf
         K = 1
         cs, λs, err = inv_power_expsum(term.xi, K)
 
@@ -435,7 +435,7 @@ function holstein_mpo(
             O_p = ops.bmin + ops.bplus
             O_ep = O_e ⊗ O_p
 
-            if term.xi == 0.0 # Pure local Holstein coupling
+            if term.xi == Inf # Pure local Holstein coupling
                 if ce == cp
                     H_ep += InfiniteMPOHamiltonian(spaces, (e, p) => O_ep)
                 end
