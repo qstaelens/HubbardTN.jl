@@ -22,7 +22,7 @@ KrylovKit = "0.10"
 MPSKit = "0.13.0 - 0.13.10"
 MPSKitModels = "0.4"
 MatrixAlgebraKit = "0.5"
-TensorKit = "0.15"
+TensorKit = "0.15, 0.17"
 TensorKitTensors = "0.2.3"
 julia = "1.10"
 
