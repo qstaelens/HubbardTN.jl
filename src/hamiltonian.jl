@@ -296,7 +296,7 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return InfiniteMPOHamiltonian(spaces, [(i,) => -B*ops.Sz for i in electron_sites])
+    return InfiniteMPOHamiltonian(spaces, [(i,) => -B*ops.Sz for i in electron_sites]...)
 end
 # Staggered magnetic field term
 function hamiltonian_term(
@@ -314,7 +314,7 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return InfiniteMPOHamiltonian(spaces, [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites])
+    return InfiniteMPOHamiltonian(spaces, [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites]...)
 end
 # Spin mean field term
 function hamiltonian_term(
@@ -331,10 +331,11 @@ function hamiltonian_term(
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
     if length(size(s)) == 1
-        return InfiniteMPOHamiltonian(spaces, [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites])
+        h = [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
     else
-        return InfiniteMPOHamiltonian(spaces, [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites])
+        h = [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
     end
+    return InfiniteMPOHamiltonian(spaces, h...)
 end
 
 function exponential_mpo(spaces, sites, O, λ::Number)
