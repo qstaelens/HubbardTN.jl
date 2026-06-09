@@ -508,7 +508,7 @@ function hamiltonian_term(
             (electron_sites[n], electron_sites[n+1]) => b01*ops.c⁺c
             for n in 1:(length(electron_sites)-1)
         ])
-        return h
+        return InfiniteMPOHamiltonian(spaces, h...)
     end
 
     if bands == 2
@@ -544,6 +544,6 @@ function hamiltonian_term(
             h = append!(h, [(4, 2) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
         end
 
-        return h
+        return InfiniteMPOHamiltonian(spaces, h...)
     end
 end
