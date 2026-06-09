@@ -246,20 +246,11 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
         ])
     end
 
-    # --- Extra terms ---
-    for term in calc.terms
-        if !(term isa HolsteinTerm)
-            h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_modes))
-        end
-    end
-
     H = InfiniteMPOHamiltonian(spaces, h...)
 
-    # --- Holstein coupling ---
+    # --- Extra terms ---
     for term in calc.terms
-        if term isa HolsteinTerm
-            H = H + holstein_mpo(term, ops, spaces, cell_width, bands, boson_modes)
-        end
+        H += hamiltonian_term(term, ops, spaces, cell_width, bands, boson_modes)
     end
 
     return H
@@ -269,6 +260,7 @@ end
 function hamiltonian_term(
                     term::ThreeBodyTerm, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -288,12 +280,13 @@ function hamiltonian_term(
         ])
     end
 
-    return h
+    return InfiniteMPOHamiltonian(spaces, h...)
 end
 # Magnetic field term
 function hamiltonian_term(
                     term::MagneticField, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -303,12 +296,13 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => -B*ops.Sz for i in electron_sites]
+    return InfiniteMPOHamiltonian(spaces, [(i,) => -B*ops.Sz for i in electron_sites])
 end
 # Staggered magnetic field term
 function hamiltonian_term(
                     term::StaggeredField, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -320,12 +314,13 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites]
+    return InfiniteMPOHamiltonian(spaces, [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites])
 end
 # Spin mean field term
 function hamiltonian_term(
                     term::SpinMeanField, 
-                    ops, 
+                    ops,
+                    spaces, 
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -336,9 +331,9 @@ function hamiltonian_term(
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
     if length(size(s)) == 1
-        return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+        return InfiniteMPOHamiltonian(spaces, [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites])
     else
-        return [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
+        return InfiniteMPOHamiltonian(spaces, [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites])
     end
 end
 
@@ -359,16 +354,13 @@ function exponential_mpo(spaces, sites, O, λ::Number)
 
     Ws = map(eachindex(spaces)) do site
         W = MPSKit.jordanmpotensortype(Vphys, T)(
-            undef,
-            V ⊗ spaces[site] ← spaces[site] ⊗ V
-        )
+            undef, V ⊗ spaces[site] ← spaces[site] ⊗ V)
 
         W[2, 1, 1, 2] = λ * BraidingTensor{T}(eachspace(W)[2, 1, 1, 2])
 
         if site == mod1(i, length(spaces))
             W[1, 1, 1, 2] = L
         end
-
         if site == mod1(j, length(spaces))
             W[2, 1, 1, 3] = R
         end
@@ -380,15 +372,14 @@ function exponential_mpo(spaces, sites, O, λ::Number)
 end
 
 # Holstein coupling term
-function holstein_mpo(
-        term::HolsteinTerm,
-        ops,
-        spaces,
-        cell_width::Int64,
-        bands::Int64,
-        boson_modes::Int64
-)
-
+function hamiltonian_term(
+                    term::HolsteinTerm, 
+                    ops,
+                    spaces, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_modes::Int64
+                )
     w = term.w
     g = term.g
     mean_ne = term.mean_ne
@@ -456,13 +447,14 @@ function holstein_mpo(
         end
     end
 
-    return H_ph + H_ep    
+    return H_ph + H_ep
 end
 
 # Bollmark term
 function hamiltonian_term(
                     term::Bollmark, 
-                    ops, 
+                    ops,
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
