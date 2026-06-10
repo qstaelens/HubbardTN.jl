@@ -13,8 +13,8 @@ export save_computation, load_computation, save_state, load_state, dict_tag
 export get_alpha, get_beta
 export inv_power_expsum
 
-using MPSKit, MPSKitModels
-using TensorKit, KrylovKit, TensorKitTensors, BlockTensorKit, MatrixAlgebraKit
+using MPSKit, MPSKitModels, TensorKit
+using KrylovKit, TensorKitTensors, BlockTensorKit, MatrixAlgebraKit
 using JLD2, Printf
 
 include("models.jl")

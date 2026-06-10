@@ -337,41 +337,6 @@ function hamiltonian_term(
     end
     return InfiniteMPOHamiltonian(spaces, h...)
 end
-
-function exponential_mpo(spaces, sites, O, λ::Number)
-    @assert abs(λ) < 1 "|λ| < 1 is required for convergence."
-
-    mpo_sites, local_ops = MPSKit.instantiate_operator(spaces, (sites => O))
-    i = first(mpo_sites)
-    j = last(mpo_sites)
-    L = first(local_ops)
-    R = last(local_ops)
-
-    T = scalartype(O)
-    S = sectortype(space(O, 1))
-    Vphys = typeof(space(O, 1))
-    V0 = typeof(left_virtualspace(R))(one(S) => 1)
-    V = SumSpace(V0, left_virtualspace(R), V0)
-
-    Ws = map(eachindex(spaces)) do site
-        W = MPSKit.jordanmpotensortype(Vphys, T)(
-            undef, V ⊗ spaces[site] ← spaces[site] ⊗ V)
-
-        W[2, 1, 1, 2] = λ * BraidingTensor{T}(eachspace(W)[2, 1, 1, 2])
-
-        if site == mod1(i, length(spaces))
-            W[1, 1, 1, 2] = L
-        end
-        if site == mod1(j, length(spaces))
-            W[2, 1, 1, 3] = R
-        end
-
-        return W
-    end
-
-    return InfiniteMPOHamiltonian(Ws)
-end
-
 # Holstein coupling term
 function hamiltonian_term(
                     term::HolsteinTerm, 
@@ -450,7 +415,6 @@ function hamiltonian_term(
 
     return H_ph + H_ep
 end
-
 # Bollmark term
 function hamiltonian_term(
                     term::Bollmark, 
@@ -461,7 +425,6 @@ function hamiltonian_term(
                     boson_modes::Int64
                 )
 
-    period = bands + boson_modes
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
     if hasproperty(ops, :cpair)
