@@ -178,6 +178,7 @@ function build_ops(symm::SymmetryConfig, bands::Int64, max_b::Int64, nmodes::Int
     end
     if ss === Trivial
         ops = merge(ops, (Sx = Sx(ps, ss; filling=fill), Sy = Sy(ps, ss; filling=fill)))
+        ops = merge(ops, (c⁺c_ud = c_plusmin_updown(ps, ss; filling=fill), c⁺c_du = c_plusmin_downup(ps, ss; filling=fill)))
     end
     if ps === Trivial
         ops = merge(ops, (c⁺pair = create_pair_onesite(ps, ss; filling=fill), cpair = delete_pair_onesite(ps, ss; filling=fill)))
@@ -245,18 +246,21 @@ function hamiltonian(calc::CalcConfig{T}) where {T<:AbstractFloat}
         ])
     end
 
+    H = InfiniteMPOHamiltonian(spaces, h...)
+
     # --- Extra terms ---
     for term in calc.terms
-        h = append!(h, hamiltonian_term(term, ops, cell_width, bands, boson_modes))
+        H += hamiltonian_term(term, ops, spaces, cell_width, bands, boson_modes)
     end
 
-    return InfiniteMPOHamiltonian(spaces, h...)
+    return H
 end
 
 # Three-body interaction term
 function hamiltonian_term(
                     term::ThreeBodyTerm, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -276,12 +280,13 @@ function hamiltonian_term(
         ])
     end
 
-    return h
+    return InfiniteMPOHamiltonian(spaces, h...)
 end
 # Magnetic field term
 function hamiltonian_term(
                     term::MagneticField, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -291,12 +296,13 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => -B*ops.Sz for i in electron_sites]
+    return InfiniteMPOHamiltonian(spaces, [(i,) => -B*ops.Sz for i in electron_sites]...)
 end
 # Staggered magnetic field term
 function hamiltonian_term(
                     term::StaggeredField, 
                     ops, 
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -308,12 +314,13 @@ function hamiltonian_term(
 
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
-    return [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites]
+    return InfiniteMPOHamiltonian(spaces, [(i,) => 2*J*Ms * phase[i] * ops.Sz for i in electron_sites]...)
 end
 # Spin mean field term
 function hamiltonian_term(
                     term::SpinMeanField, 
-                    ops, 
+                    ops,
+                    spaces, 
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -324,25 +331,60 @@ function hamiltonian_term(
     electron_sites = [i + div(i-1, bands)*boson_modes for i in 1:(cell_width*bands)]
 
     if length(size(s)) == 1
-        return [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
+        h = [(i,) => J[i,j]*s[j]*ops.Sz for i in electron_sites, j in electron_sites]
     else
-        return [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
+        h = [(i,) => J[i,j]*(s[j,1]*ops.Sx + s[j,2]*ops.Sy + s[j,3]*ops.Sz) for i in electron_sites, j in electron_sites]
     end
+    return InfiniteMPOHamiltonian(spaces, h...)
 end
+
+function exponential_mpo(spaces, sites, O, λ::Number)
+    @assert abs(λ) < 1 "|λ| < 1 is required for convergence."
+
+    mpo_sites, local_ops = MPSKit.instantiate_operator(spaces, (sites => O))
+    i = first(mpo_sites)
+    j = last(mpo_sites)
+    L = first(local_ops)
+    R = last(local_ops)
+
+    T = scalartype(O)
+    S = sectortype(space(O, 1))
+    Vphys = typeof(space(O, 1))
+    V0 = typeof(left_virtualspace(R))(one(S) => 1)
+    V = SumSpace(V0, left_virtualspace(R), V0)
+
+    Ws = map(eachindex(spaces)) do site
+        W = MPSKit.jordanmpotensortype(Vphys, T)(
+            undef, V ⊗ spaces[site] ← spaces[site] ⊗ V)
+
+        W[2, 1, 1, 2] = λ * BraidingTensor{T}(eachspace(W)[2, 1, 1, 2])
+
+        if site == mod1(i, length(spaces))
+            W[1, 1, 1, 2] = L
+        end
+        if site == mod1(j, length(spaces))
+            W[2, 1, 1, 3] = R
+        end
+
+        return W
+    end
+
+    return InfiniteMPOHamiltonian(Ws)
+end
+
 # Holstein coupling term
 function hamiltonian_term(
-        term::HolsteinTerm,
-        ops,
-        cell_width::Int64,
-        bands::Int64,
-        boson_modes::Int64
-)
-
+                    term::HolsteinTerm, 
+                    ops,
+                    spaces, 
+                    cell_width::Int64,
+                    bands::Int64,
+                    boson_modes::Int64
+                )
     w = term.w
     g = term.g
     mean_ne = term.mean_ne
     xi = term.xi
-    thr = term.threshold
 
     period = bands + boson_modes
 
@@ -352,7 +394,28 @@ function hamiltonian_term(
     phonon_ind(i) = mod1(i, period) - bands
     cell(i) = div(i-1, period)
 
-    h::Vector{Pair{Tuple{Vararg{Int64}}, Any}} = [(i,) => w[phonon_ind(i)] * ops.nb for i in phonon_sites]
+    H_ph = InfiniteMPOHamiltonian(spaces, [(i,) => w[phonon_ind(i)] * ops.nb for i in phonon_sites]...)
+
+    H_ep = 0 * H_ph
+
+    # Precompute non-local exponential fit for a power-law
+    if term.xi != Inf
+        K = 1
+        cs, λs, err = inv_power_expsum(term.xi, K)
+
+        while err ≥ term.threshold
+            K += 1
+            cs, λs, err = inv_power_expsum(term.xi, K)
+        end
+
+        cs = real.(cs)
+        cs ./= sum(cs)
+        λs = real.(λs)
+
+        @info "Created exponential fit for non-local Holstein coupling" K=K err=err
+        println("cs = ", cs)
+        println("λs = ", λs)
+    end
 
     for e in electron_sites
         ce = cell(e)
@@ -360,25 +423,39 @@ function hamiltonian_term(
         for p in phonon_sites
             cp = cell(p)
             m = phonon_ind(p)
+            O_e = g[be, m] * (ops.n - mean_ne * id(domain(ops.n)))
+            O_p = ops.bmin + ops.bplus
+            O_ep = O_e ⊗ O_p
 
-            r = abs(ce - cp)
+            if term.xi == Inf # Pure local Holstein coupling
+                if ce == cp
+                    H_ep += InfiniteMPOHamiltonian(spaces, (e, p) => O_ep)
+                end
+            else # Nonlocal Holstein coupling in terms of exponentials
+                if ce == cp
+                    println(e,p,g[be,m])
+                    for (c, λ) in zip(cs, λs)
+                        H_ep += exponential_mpo(spaces, (e, p), c * O_ep, λ^2)
+                    end
 
-            g_eff =
-                xi == 0 ? (r == 0 ? g[be,m] : 0) :
-                g[be,m] * exp(-r/xi)
-
-            if abs(g_eff) ≥ thr && g_eff != 0
-                push!(h, (e,p) => g_eff * (ops.n - mean_ne*id(domain(ops.n))) ⊗ (ops.bmin + ops.bplus))
+                elseif abs(ce - cp) == 1
+                    println(e,p,g[be,m])
+                    for (c, λ) in zip(cs, λs)
+                        H_ep += exponential_mpo(spaces, (e, p), c * λ * O_ep, λ^2)
+                    end
+                end
             end
         end
     end
 
-    return h
+    return H_ph + H_ep
 end
+
 # Bollmark term
 function hamiltonian_term(
                     term::Bollmark, 
-                    ops, 
+                    ops,
+                    spaces,
                     cell_width::Int64,
                     bands::Int64,
                     boson_modes::Int64
@@ -397,7 +474,11 @@ function hamiltonian_term(
         b0, b01 = term.beta
     elseif bands == 2
         a0, a1, a00, a01, a10, a11 = term.alpha
-        b00, b01, b10, b11 = term.beta
+        if hasproperty(ops, :c⁺c_ud)
+            b00, b01, b10, b11, b00_ud, b01_ud, b10_ud, b11_ud = term.beta
+        else
+            b00, b01, b10, b11 = term.beta
+        end
     else
         error("Bollmark term: only 1-band and 2-band models are implemented, got bands = $bands.")
     end
@@ -428,7 +509,7 @@ function hamiltonian_term(
             (electron_sites[n], electron_sites[n+1]) => b01*ops.c⁺c
             for n in 1:(length(electron_sites)-1)
         ])
-        return h
+        return InfiniteMPOHamiltonian(spaces, h...)
     end
 
     if bands == 2
@@ -454,6 +535,16 @@ function hamiltonian_term(
         h = append!(h, [(2, 4) => b11*ops.c⁺c])
         h = append!(h, [(4, 2) => b11*ops.c⁺c])
 
-        return h
+        if hasproperty(ops, :c⁺c_ud)
+            @assert b01_ud == b10_ud
+            h = append!(h, [(1, 2) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+            h = append!(h, [(2, 1) => b01_ud*ops.c⁺c_ud + b01_ud*ops.c⁺c_du])
+            h = append!(h, [(1, 3) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+            h = append!(h, [(3, 1) => b00_ud*ops.c⁺c_ud + b00_ud*ops.c⁺c_du])
+            h = append!(h, [(2, 4) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+            h = append!(h, [(4, 2) => b11_ud*ops.c⁺c_ud + b11_ud*ops.c⁺c_du])
+        end
+
+        return InfiniteMPOHamiltonian(spaces, h...)
     end
 end

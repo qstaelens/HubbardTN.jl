@@ -16,7 +16,8 @@ tol = 1e-1
     # g columns must match length of w
     @test_throws ArgumentError HolsteinTerm(w, [1.0 2.0], 5, 1.0)
 
-    # xi must be non-negative
+    # xi must be positive
+    @test_throws ArgumentError HolsteinTerm(w, g, 5, 1.0; xi=0.0)
     @test_throws ArgumentError HolsteinTerm(w, g, 5, 1.0; xi=-1.0)
 
     # threshold must be non-negative
@@ -30,9 +31,9 @@ tol = 1e-1
     @test term.xi == 2.0
     @test term.threshold == 1e-4
 
-    # valid local constructor (defaults)
+   # valid local constructor using xi = Inf
     term_local = HolsteinTerm(w, g, 5, 1.0)
-    @test term_local.xi == 0.0
+    @test isinf(term_local.xi)
     @test term_local.threshold == 0.0
 end
 

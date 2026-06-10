@@ -263,7 +263,7 @@ end
 """
     SpinMeanField{T<:AbstractFloat} <: AbstractHamiltonianTerm
 
-Mean-field coupling term representing inter-chain spin interactions.
+Mean-field coupling term representing inter-chain spin interactions. 
 
 # Fields
 - `J::Matrix{T}`: Inter-chain coupling matrix of size NxN, where J[i,j] couples site i
@@ -336,16 +336,16 @@ struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
                 g::Matrix{T},
                 max_b::Int64,
                 mean_ne::T;
-                xi::T=zero(T),
+                xi::T=Inf,
                 threshold::T=zero(T)
             ) where {T<:AbstractFloat}
         max_b > 0 || throw(ArgumentError("max_b must be a positive integer, got $max_b."))
         size(g, 2) == length(w) || throw(ArgumentError(
             "Number of columns of g ($(size(g,2))) must equal length of w ($(length(w)))."))
-        xi >= zero(T) || throw(ArgumentError("xi must be non-negative, got $xi."))
+        xi > zero(T) || throw(ArgumentError("xi must be positive, got $xi."))
         threshold >= zero(T) || throw(ArgumentError("threshold must be non-negative, got $threshold."))
-        xi == zero(T) || threshold > zero(T) || throw(ArgumentError(
-            "A positive threshold is required when xi > 0 to avoid retaining negligibly small long-range couplings."))
+        !isfinite(xi) || threshold > zero(T) || throw(ArgumentError(
+            "A positive threshold is required when xi < Inf to avoid retaining negligibly small long-range couplings."))
         new{T}(w, g, max_b, mean_ne, xi, threshold)
     end
 end

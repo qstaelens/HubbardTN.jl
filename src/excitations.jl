@@ -207,7 +207,7 @@ function compute_chargegap(gs::Dict{String,Any}, calc::CalcConfig; resolution::I
 end
 
 """
-    compute_pairing_energy(gs, calc; resolution=5)
+    compute_pairing_energy(gs, calc; resolution=5, tol::Float64=1e-6)
 
 Compute the pairing energy from single-particle and two-particle addition excitations on a uniform momentum grid.
 
@@ -242,29 +242,16 @@ function compute_pairing_energy(gs::Dict{String,Any}, calc::CalcConfig; resoluti
     E1 = real.(vec(ex_add["Es"]))
     E2 = real.(vec(ex_double["Es"]))
 
-    E1min = minimum(E1)
-    idx_E1mins = findall(x -> isapprox(x, E1min; atol=tol), E1)
-
-    valid_k = nothing
-    for i in idx_E1mins
-        k = momenta[i]
-        k_partner = mod(2π - k, 2π)
-
-        j = findfirst(x -> isapprox(x, k_partner; atol=tol), momenta)
-        if j !== nothing && isapprox(E1[j], E1min; atol=tol)
-            valid_k = (i, j)
-            break
-        end
-    end
-
-    valid_k === nothing && error("No valid E1 minimum found such that 2π-k is also a minimum.")
+    E1min, idx_E1min = findmin(E1)
+    k_E1min = momenta[idx_E1min]
 
     E2min, idx_E2min = findmin(E2)
     k_E2min = momenta[idx_E2min]
 
-    if !isapprox(k_E2min, 0.0; atol=tol) && !isapprox(k_E2min, 2π; atol=tol)
+    if !isapprox(k_E2min, 0.0; atol=tol)
         error("E2 minimum is not at k = 0.")
     end
-    Ep = E1min  + E1min - E2min
-    return Ep, k_E2min
+
+    Ep = 2*E1min - E2min
+    return Ep, k_E1min, k_E2min
 end
