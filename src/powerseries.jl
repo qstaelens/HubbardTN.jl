@@ -46,12 +46,12 @@ function inv_power_expsum(α::Real, K::Int; M::Int = max(256, 2K + 1))
     H = [y[i + j - 1] for i in 1:(M - L), j in 1:(L + 1)]
 
     # Truncated SVD; keep top-K left singular vectors.
-    U_K, = MatruxAlgebraKit.svd_trunc(H; trunc = MatruxAlgebraKit.truncrank(K))
+    U_K, = MatrixAlgebraKit.svd_trunc(H; trunc = MatrixAlgebraKit.truncrank(K))
 
     # Shift-invariance:  rows of U_K span span{ (λ_k^i)_i }, so the
     # K × K operator Φ relating the row-shifted versions has eigvals λ_k.
     Φ = U_K[1:(end - 1), :] \ U_K[2:end, :]
-    λ = MatruxAlgebraKit.eig_vals(Φ)
+    λ = MatrixAlgebraKit.eig_vals(Φ)
 
     # Recover c by least squares on the original samples.
     V = [λk^r for r in 1:M, λk in λ]
