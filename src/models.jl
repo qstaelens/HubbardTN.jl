@@ -319,7 +319,8 @@ smaller than `threshold` are neglected.
 # Constructor
     HolsteinTerm(w, g, max_b, mean_ne; xi=zero(T), threshold=zero(T))
 
-All arguments are positional except `xi` and `threshold`. Default for `xi` = Inf, while default for `threshold` = 0.  
+All arguments are positional except `xi` and `threshold`. Default for `xi` = Inf, 
+while default for `threshold` = 0.  
 Pass `xi < Inf` together with a positive `threshold` to enable exponentially decaying non-local coupling.
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
