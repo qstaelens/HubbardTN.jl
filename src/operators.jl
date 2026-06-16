@@ -133,7 +133,7 @@ function c_plusmin_up(T::Type{<:Number}, ::Type{SU2Irrep}, ::Type{SU2Irrep}; kwa
 end
 
 """
-    c_plusmin_down(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+    c_plusmin_down(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
 
 Return the two-body operator ``c†_{1,↓}, c_{2,↓}`` that creates a spin-down electron at the first site and annihilates a spin-down electron at the second.
 """
@@ -205,7 +205,7 @@ function c_minplus_up(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin
 end
 
 """
-    c_minplus_down(T, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
+    c_minplus_down(T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector})
 
 Return the Hermitian conjugate of `c_plusmin_down`, i.e.
 ``(c†_{1,↓}, c_{2,↓})† = -c_{1,↓}, c†_{2,↓}`` (note the extra minus sign). 
