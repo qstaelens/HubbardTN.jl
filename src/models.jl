@@ -311,7 +311,7 @@ smaller than `threshold` are neglected.
     Mean number of electrons per site in the bare Hubbard model, used to
     normal-order the density operator.
 - `xi::T`  
-    Exponential decay length for non-local coupling (`0` means strictly local).
+    Exponential decay length for non-local coupling (`Inf` means strictly local).
 - `threshold::T`  
     Minimum coupling magnitude retained in the Hamiltonian; smaller values are
     dropped for efficiency.
@@ -319,9 +319,9 @@ smaller than `threshold` are neglected.
 # Constructor
     HolsteinTerm(w, g, max_b, mean_ne; xi=zero(T), threshold=zero(T))
 
-All arguments are positional except `xi` and `threshold`, which are keyword
-arguments with default `0`.  Pass `xi > 0` together with a positive
-`threshold` to enable exponentially decaying non-local coupling.
+All arguments are positional except `xi` and `threshold`. Default for `xi` = Inf, 
+while default for `threshold` = 0.  
+Pass `xi < Inf` together with a positive `threshold` to enable exponentially decaying non-local coupling.
 """
 struct HolsteinTerm{T<:AbstractFloat} <: AbstractHamiltonianTerm
     w::Vector{T}
