@@ -40,8 +40,7 @@ bands = 1
     dim = dim_state(ψ)
 
     Ne = density_e(ψ, calc)
-    println("Number of electrons per site: ", Ne)
-    @test Ne ≈ 1.0 atol=tol
+    @test sum(Ne) / length(Ne) ≈ 1.0 atol=tol
 
     ent = entanglement_spectrum(ψ, Int(bands*cell_width/2))
     println("Entanglement spectrum: \n")
@@ -58,9 +57,11 @@ E_norm = -1.768
     gs = compute_groundstate(calc; svalue=s, finite_mps = true)
     ψ₀ = gs["groundstate"]
     H = gs["ham"]
+
     E0 = expectation_value(ψ₀, H)
     E = sum(real(E0))/length(ψ₀)
     @test E ≈ E_norm atol=tol
+    
     Ne = density_e(ψ₀, calc)
-    @test Ne ≈ f[i] atol=tol
+    @test sum(Ne) / length(Ne) ≈ f[i] atol=tol
 end
