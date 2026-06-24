@@ -16,12 +16,12 @@ function dim_state(ψ::Union{InfiniteMPS,FiniteMPS})
 end
 
 """
-    density_e(ψ::InfiniteMPS, calc::CalcConfig)
+    density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
 
 Compute the electron density.
-- Returns the density per orbital and per unit-cell position.
+- Returns the density per orbital and per unit-cell position/site.
 """
-function density_e(ψ::InfiniteMPS, calc::CalcConfig)
+function density_e(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
     symm = calc.symmetries
     n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
 
@@ -35,41 +35,18 @@ function density_e(ψ::InfiniteMPS, calc::CalcConfig)
     for i in 1:bands
         for j in 1:symm.cell_width
             site = i + (j - 1) * (bands + boson_modes)
-            Ne[i, j] = real(expectation_value(ψ, site => n))
+            Ne[i,j] = real(expectation_value(ψ, site => n))
         end
     end
     return Ne
 end
 
 """
-    density_e(ψ::FiniteMPS, calc::CalcConfig)
-
-Compute the electron density.
-- Returns the average density over the full chain.
-"""
-function density_e(ψ::FiniteMPS, calc::CalcConfig)
-    symm = calc.symmetries
-    n = number_e(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
-
-    idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
-    w = (idx === nothing ? [] : calc.terms[idx].w)
-    boson_modes = (idx === nothing ? 0 : 1) * length(w)
-
-    chain = FiniteChain(calc.hubbard.bands*symm.cell_width)
-    Ntot = @mpoham begin
-        sum(vertices(chain)) do i
-            n{i}
-        end
-    end
-    return real(expectation_value(ψ, Ntot)) / (calc.hubbard.bands*symm.cell_width)
-end
-
-"""
-    density_b(ψ::InfiniteMPS, calc::CalcConfig)
+    density_b(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
 
 Compute the number of bosons per site in the unit cell.
 """
-function density_b(ψ::InfiniteMPS, calc::CalcConfig)
+function density_b(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
     symm = calc.symmetries
     idx = findfirst(t -> t isa HolsteinTerm, calc.terms)
     max_b = (idx === nothing ? error("No bosonic terms in model") : calc.terms[idx].max_b)
@@ -90,11 +67,11 @@ function density_b(ψ::InfiniteMPS, calc::CalcConfig)
 end
 
 """
-    density_spin(ψ::InfiniteMPS, calc::CalcConfig)
+    density_spin(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
 
 Compute the electron spin density per site in the unit cell.
 """
-function density_spin(ψ::InfiniteMPS, calc::CalcConfig)
+function density_spin(ψ::Union{InfiniteMPS,FiniteMPS}, calc::CalcConfig)
     symm = calc.symmetries
 
     n_up = number_up(symm.particle_symmetry, symm.spin_symmetry; filling=symm.filling)
