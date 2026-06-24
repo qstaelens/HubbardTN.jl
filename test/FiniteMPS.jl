@@ -47,3 +47,20 @@ bands = 1
     println("Entanglement spectrum: \n")
     display(ent)
 end
+
+f = [1//2, 3//2];
+E_norm = -1.768
+
+@testset "Dependence on filling" for i in eachindex(f)
+    symm = SymmetryConfig(U1Irrep, U1Irrep, cell_width*6, f[i])
+    model = HubbardParams(bands, t, U)
+    calc = CalcConfig(symm, model)
+    gs = compute_groundstate(calc; svalue=s, finite_mps = true)
+    ψ₀ = gs["groundstate"]
+    H = gs["ham"]
+    E0 = expectation_value(ψ₀, H)
+    E = sum(real(E0))/length(ψ₀)
+    @test E ≈ E_norm atol=tol
+    Ne = density_e(ψ₀, calc)
+    @test Ne ≈ f[i] atol=tol
+end
