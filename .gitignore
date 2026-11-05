@@ -11,3 +11,4 @@ docs/site/
 /data/
 /examples/*_QS*.jl
 /src/*_QS*.jl
+*load_mps_rebuild_hamiltonian.jl
